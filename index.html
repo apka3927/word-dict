@@ -24,12 +24,9 @@
       const { useEffect, useMemo, useState } = React;
       const CATEGORIES = ["있는말", "있던말", "만든말"];
 
-      // 🔧 이 두 줄에 본인 프로젝트 값을 넣으세요 (따옴표 유지)
-      const SUPABASE_URL = "https://fbyilsyeygaucdbaexut.supabase.co";           // ← Project URL
-      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZieWlsc3lleWdhdWNkYmFleHV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwOTkyNDEsImV4cCI6MjA3MTY3NTI0MX0.2c-_df6s-3cxa1YkxsqD04Hql_5OXKeTPhidz7jNvQQ";         // ← Publishable(anon) key
-      if (SUPABASE_URL.includes('YOUR-REF') || SUPABASE_ANON_KEY.includes('YOUR-PUBLISHABLE')) {
-        setTimeout(() => alert('Supabase URL/키를 상단에 넣어주세요.'), 0);
-      }
+      // ✅ 사용자 제공 값으로 채움 (따옴표 유지)
+      const SUPABASE_URL = "https://fbyilsyeygaucdbaexut.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZieWlsc3lleWdhdWNkYmFleHV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwOTkyNDEsImV4cCI6MjA3MTY3NTI0MX0.2c-_df6s-3cxa1YkxsqD04Hql_5OXKeTPhidz7jNvQQ";
 
       const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -124,13 +121,15 @@
           if (!CATEGORIES.includes(category)) return alert('분류 선택이 올바르지 않습니다.');
           setBusy(true); setErr("");
           try {
-            const { error } = await db.from('entries').update({ word, meaning, category, method }).eq('id', editingId);
+            const { error } = await db.from('entries')
+              .update({ word, meaning, category, method })
+              .eq('id', editingId);
             if (error) throw error;
             setEditingId(null);
             await load();
           } catch (e) {
             console.error(e);
-            alert('수정 오류: ' + (e.message || e) + '\n⚠️ UPDATE가 금지된 경우 Policies에 update 정책을 추가하세요.');
+            alert('수정 오류: ' + (e.message || e) + '\n⚠️ UPDATE 정책이 없으면 아래 SQL을 실행하세요:\ncreate policy "public update" on public.entries for update using (true) with check (true);');
           } finally { setBusy(false); }
         }
 
@@ -282,8 +281,5 @@
       const root = ReactDOM.createRoot(document.getElementById('root'));
       root.render(<WordRegistry />);
     </script>
-  </body>
-</html>
-
   </body>
 </html>
