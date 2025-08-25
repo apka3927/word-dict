@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>단어 등록·검색 (Supabase 저장)</title>
-  <!-- BUILD MARKER: DARK_CLEAN_NO_PATTERN_2025-08-25_03 -->
+  <!-- BUILD MARKER: DARK_SOLID_BLUE_BORDERED_2025-08-25_04 -->
   <script>
     // Tailwind (CDN)
     tailwind = {
@@ -13,8 +13,7 @@
         theme: {
           extend: {
             fontFamily: { sans: ["Inter","Pretendard","ui-sans-serif","system-ui"] },
-            colors: { brand: { 500:'#3b82f6', 600:'#2563eb', 700:'#1d4ed8' } },
-            boxShadow: { soft: '0 20px 50px -20px rgba(0,0,0,.45)' }
+            colors: { brand: { 500:'#3b82f6', 600:'#2563eb', 700:'#1d4ed8' } }
           }
         }
       }
@@ -29,26 +28,25 @@
     :root{ color-scheme: dark }
     html,body{ height:100% }
     body{ font-family: Inter, Pretendard, ui-sans-serif, system-ui; }
-    /* 깨끗한 다크 그라데이션 (도트/패턴 없음) */
-    .page-bg{ background: radial-gradient(1200px 600px at 20% -10%, #0f172a 0%, transparent 60%),
-                         radial-gradient(1000px 500px at 120% 10%, #0b1220 0%, transparent 60%),
-                         linear-gradient(180deg, #0b1220 0%, #0a0f1a 100%); }
-    .card{ @apply rounded-2xl border border-slate-800/80 bg-slate-900/70 backdrop-blur px-5 py-4 shadow-soft; }
-    .pill{ @apply text-xs px-2.5 py-1 rounded-full border border-slate-700/80 bg-slate-900/80; }
-    .input{ @apply w-full rounded-xl border border-slate-700/80 bg-slate-900/90 text-slate-100 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-600; }
-    .btn{ @apply inline-flex items-center justify-center gap-1 rounded-xl px-4 py-2 text-sm font-semibold; }
+    /* ▶ 단색(그라데이션/패턴 없음), 기존보다 한 톤 밝은 네이비 */
+    .page-solid{ background-color:#0f233d; }
+    /* UI */
+    .card{ @apply rounded-lg border-2 border-slate-700/70 bg-slate-900/70 backdrop-blur px-5 py-4; }
+    .pill{ @apply text-xs px-2.5 py-1 rounded-full border-2 border-slate-700/70 bg-slate-900/80; }
+    .input{ @apply w-full rounded-lg border-2 border-slate-700/70 bg-slate-900/90 text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/40; }
+    .btn{ @apply inline-flex items-center justify-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold; }
     .btn-primary{ @apply bg-brand-600 text-white hover:bg-brand-700; }
-    .btn-ghost{ @apply border border-slate-700/80 bg-slate-900/70 hover:bg-slate-800/70; }
+    .btn-ghost{ @apply border-2 border-slate-700/70 bg-slate-900/70 hover:bg-slate-800/70; }
     .divider{ @apply h-px bg-slate-800 my-3; }
   </style>
 </head>
-<body class="min-h-full page-bg text-slate-100">
-  <!-- 헤더 (파란 강조, 라운드) -->
-  <header class="sticky top-0 z-20 backdrop-blur">
+<body class="min-h-full page-solid text-slate-100">
+  <!-- 헤더 -->
+  <header class="sticky top-0 z-20">
     <div class="max-w-6xl mx-auto px-4 pt-5 pb-3">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <div class="h-10 w-10 grid place-items-center rounded-xl bg-brand-600 text-white shadow-soft">🔤</div>
+          <div class="h-9 w-9 grid place-items-center rounded-lg bg-brand-600 text-white">🔤</div>
           <div>
             <div class="text-lg font-semibold">단어 등록·검색 (Supabase 저장)</div>
             <div class="text-xs text-slate-400">원격 DB(Postgres)에 저장됩니다.</div>
@@ -67,7 +65,6 @@
       <!-- 등록 -->
       <section class="card md:col-span-1">
         <h2 class="font-semibold">단어 등록</h2>
-        <p class="text-xs text-slate-400 mt-1">입력 후 <b>추가</b>를 누르세요.</p>
         <div class="mt-3 grid gap-3">
           <label class="grid gap-1"><span class="text-xs text-slate-300">단어</span>
             <input id="newWord" class="input" placeholder="예: 빗모질다" />
@@ -93,7 +90,7 @@
         </div>
       </section>
 
-      <!-- 검색 -->
+      <!-- 검색/목록 -->
       <section class="card md:col-span-2">
         <h2 class="font-semibold">검색</h2>
         <div class="mt-3 grid md:grid-cols-3 gap-3">
@@ -110,7 +107,6 @@
           <button id="btnReload" class="btn btn-ghost px-2 py-1">새로고침</button>
         </div>
 
-        <!-- 목록 -->
         <ul id="list" class="mt-4 grid md:grid-cols-2 gap-4"></ul>
       </section>
     </div>
@@ -134,7 +130,7 @@
 
   <script>
   (function(){
-    // ▼ Supabase 연결값 (사용자 프로젝트)
+    // Supabase 연결값
     const SUPABASE_URL = "https://fbyilsyeygaucdbaexut.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZieWlsc3lleWdhdWNkYmFleHV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwOTkyNDEsImV4cCI6MjA3MTY3NTI0MX0.2c-_df6s-3cxa1YkxsqD04Hql_5OXKeTPhidz7jNvQQ";
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -145,8 +141,8 @@
     // Toast helper
     function toast(msg, type='ok'){
       const el = document.createElement('div');
-      el.className = `rounded-xl px-3 py-2 text-sm shadow-soft ${type==='ok'?'bg-brand-600 text-white':'bg-rose-600 text-white'}`;
-      el.textContent = msg; $('#toasts').appendChild(el); setTimeout(()=>el.remove(), 1800);
+      el.className = `rounded-lg px-3 py-2 text-sm ${type==='ok'?'bg-brand-600 text-white':'bg-rose-600 text-white'}`;
+      el.textContent = msg; $('#toasts').appendChild(el); setTimeout(()=>el.remove(), 1600);
     }
 
     function setBadge(){ $('#badge').textContent = state.adminOK ? '🔓 관리자 모드' : '🔒 잠금 중'; }
