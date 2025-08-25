@@ -1,20 +1,20 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" class="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>단어 사전 · 파란 테마 v2</title>
-  <!-- BUILD MARKER: BLUE_V2_2025-08-25_01 -->
+  <title>단어 등록·검색 (Supabase 저장)</title>
+  <!-- BUILD MARKER: DARK_CLEAN_NO_PATTERN_2025-08-25_03 -->
   <script>
-    // Tailwind on CDN
+    // Tailwind (CDN)
     tailwind = {
       config: {
         darkMode: 'class',
         theme: {
           extend: {
-            fontFamily: { sans: ["Inter", "Pretendard", "ui-sans-serif", "system-ui"] },
-            colors: { brand: { 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' } },
-            boxShadow: { soft: '0 12px 30px -15px rgba(0,0,0,.35)' }
+            fontFamily: { sans: ["Inter","Pretendard","ui-sans-serif","system-ui"] },
+            colors: { brand: { 500:'#3b82f6', 600:'#2563eb', 700:'#1d4ed8' } },
+            boxShadow: { soft: '0 20px 50px -20px rgba(0,0,0,.45)' }
           }
         }
       }
@@ -26,77 +26,78 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    :root{ color-scheme: light dark }
+    :root{ color-scheme: dark }
     html,body{ height:100% }
     body{ font-family: Inter, Pretendard, ui-sans-serif, system-ui; }
-    /* Subtle grid bg */
-    .bg-grid { background-image: radial-gradient(circle at 1px 1px, rgba(37,99,235,.12) 1px, transparent 0); background-size: 22px 22px; }
-    .dark .bg-grid { background-image: radial-gradient(circle at 1px 1px, rgba(96,165,250,.18) 1px, transparent 0) }
-    /* UI atoms */
-    .input{ @apply w-full rounded-xl border-2 border-slate-300/80 dark:border-slate-700/90 bg-white/80 dark:bg-slate-900/70 backdrop-blur px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-500/40; }
-    .btn{ @apply inline-flex items-center justify-center gap-1 rounded-xl px-4 py-2 text-sm font-semibold transition active:translate-y-[1px]; }
-    .btn-primary{ @apply bg-brand-600 text-white border-2 border-brand-700 hover:bg-brand-700; }
-    .btn-ghost{ @apply border-2 border-slate-300/80 dark:border-slate-700/90 hover:bg-slate-50/70 dark:hover:bg-slate-800/60; }
-    .tag{ @apply text-xs px-2.5 py-1 rounded-full border-2 border-slate-300/80 dark:border-slate-700/90 bg-white/70 dark:bg-slate-900/70; }
-    .card{ @apply rounded-2xl border-2 border-slate-200/80 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/70 backdrop-blur shadow-soft; }
-    .divider{ @apply h-[1px] bg-slate-200 dark:bg-slate-800 my-3; }
-    .link{ @apply text-brand-600 hover:underline; }
+    /* 깨끗한 다크 그라데이션 (도트/패턴 없음) */
+    .page-bg{ background: radial-gradient(1200px 600px at 20% -10%, #0f172a 0%, transparent 60%),
+                         radial-gradient(1000px 500px at 120% 10%, #0b1220 0%, transparent 60%),
+                         linear-gradient(180deg, #0b1220 0%, #0a0f1a 100%); }
+    .card{ @apply rounded-2xl border border-slate-800/80 bg-slate-900/70 backdrop-blur px-5 py-4 shadow-soft; }
+    .pill{ @apply text-xs px-2.5 py-1 rounded-full border border-slate-700/80 bg-slate-900/80; }
+    .input{ @apply w-full rounded-xl border border-slate-700/80 bg-slate-900/90 text-slate-100 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-600; }
+    .btn{ @apply inline-flex items-center justify-center gap-1 rounded-xl px-4 py-2 text-sm font-semibold; }
+    .btn-primary{ @apply bg-brand-600 text-white hover:bg-brand-700; }
+    .btn-ghost{ @apply border border-slate-700/80 bg-slate-900/70 hover:bg-slate-800/70; }
+    .divider{ @apply h-px bg-slate-800 my-3; }
   </style>
 </head>
-<body class="min-h-full bg-gradient-to-br from-slate-50 to-sky-50 dark:from-slate-950 dark:to-slate-900 bg-grid text-slate-900 dark:text-slate-100">
-  <div class="mx-auto max-w-6xl px-4 py-6 space-y-6">
-    <!-- Header -->
-    <header class="card sticky top-4 z-10 px-5 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="h-9 w-9 grid place-items-center rounded-xl bg-brand-600 text-white border-2 border-brand-700">🔷</div>
-        <div>
-          <div class="text-lg font-semibold">단어 등록·검색·수정/삭제</div>
-          <div class="text-xs text-slate-500 dark:text-slate-400">Supabase RPC 보호 · 비밀번호 필요 · <span class="text-brand-600 font-semibold">v2</span></div>
+<body class="min-h-full page-bg text-slate-100">
+  <!-- 헤더 (파란 강조, 라운드) -->
+  <header class="sticky top-0 z-20 backdrop-blur">
+    <div class="max-w-6xl mx-auto px-4 pt-5 pb-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 grid place-items-center rounded-xl bg-brand-600 text-white shadow-soft">🔤</div>
+          <div>
+            <div class="text-lg font-semibold">단어 등록·검색 (Supabase 저장)</div>
+            <div class="text-xs text-slate-400">원격 DB(Postgres)에 저장됩니다.</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="badge" class="pill">🔒 잠금 중</span>
+          <button id="btnOpenPwd" class="btn btn-ghost">관리자</button>
         </div>
       </div>
-      <div class="flex items-center gap-2">
-        <span id="badge" class="tag">🔒 잠금 중</span>
-        <span class="tag">v2</span>
-        <button id="btnTheme" class="btn btn-ghost" title="테마 전환">🌗</button>
-        <button id="btnOpenPwd" class="btn btn-ghost">관리자</button>
-      </div>
-    </header>
+    </div>
+  </header>
 
-    <!-- Row: Add + Search -->
+  <main class="max-w-6xl mx-auto px-4 pb-16 pt-4">
     <div class="grid md:grid-cols-3 gap-6">
-      <!-- Add -->
-      <section class="card p-5 md:col-span-1">
+      <!-- 등록 -->
+      <section class="card md:col-span-1">
         <h2 class="font-semibold">단어 등록</h2>
+        <p class="text-xs text-slate-400 mt-1">입력 후 <b>추가</b>를 누르세요.</p>
         <div class="mt-3 grid gap-3">
-          <label class="grid gap-1"><span class="text-xs text-slate-600 dark:text-slate-300">단어</span>
+          <label class="grid gap-1"><span class="text-xs text-slate-300">단어</span>
             <input id="newWord" class="input" placeholder="예: 빗모질다" />
           </label>
-          <label class="grid gap-1"><span class="text-xs text-slate-600 dark:text-slate-300">뜻</span>
+          <label class="grid gap-1"><span class="text-xs text-slate-300">뜻</span>
             <textarea id="newMeaning" rows="3" class="input" placeholder="예: 횡포(橫暴)하다"></textarea>
           </label>
-          <label class="grid gap-1"><span class="text-xs text-slate-600 dark:text-slate-300">분류</span>
+          <label class="grid gap-1"><span class="text-xs text-slate-300">분류</span>
             <select id="newCat" class="input">
               <option>있는말</option>
               <option>있던말</option>
               <option>만든말</option>
             </select>
           </label>
-          <label class="grid gap-1"><span class="text-xs text-slate-600 dark:text-slate-300">만든방법</span>
-            <input id="newMethod" class="input" placeholder="예: pisk-(橫) + mwǒtil-(暴) 직역"/>
+          <label class="grid gap-1"><span class="text-xs text-slate-300">만든방법</span>
+            <input id="newMethod" class="input" placeholder="예: 빗모질다 pisk-(橫) + mwǒtil-(暴) 직역"/>
           </label>
           <div class="flex gap-2">
             <button id="btnAdd" class="btn btn-primary">추가</button>
             <button id="btnClear" class="btn btn-ghost">초기화</button>
           </div>
-          <p id="sysAdd" class="text-xs text-rose-500"></p>
+          <p id="sysAdd" class="text-xs text-rose-400"></p>
         </div>
       </section>
 
-      <!-- Search -->
-      <section class="card p-5 md:col-span-2">
+      <!-- 검색 -->
+      <section class="card md:col-span-2">
         <h2 class="font-semibold">검색</h2>
         <div class="mt-3 grid md:grid-cols-3 gap-3">
-          <input id="q" class="input md:col-span-2" placeholder="단어/뜻/만든방법 검색" />
+          <input id="q" class="input md:col-span-2" placeholder="단어/뜻/만든방법 검색…" />
           <select id="filterCat" class="input">
             <option>전체</option>
             <option>있는말</option>
@@ -104,107 +105,103 @@
             <option>만든말</option>
           </select>
         </div>
-        <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+        <div class="mt-2 text-xs text-slate-400 flex items-center gap-2">
           <span id="count">–</span>
           <button id="btnReload" class="btn btn-ghost px-2 py-1">새로고침</button>
         </div>
+
+        <!-- 목록 -->
+        <ul id="list" class="mt-4 grid md:grid-cols-2 gap-4"></ul>
       </section>
     </div>
+  </main>
 
-    <!-- List -->
-    <ul id="list" class="grid md:grid-cols-2 gap-4"></ul>
-
-    <!-- Toasts -->
-    <div id="toasts" class="fixed top-4 right-4 space-y-2 z-50"></div>
-  </div>
-
-  <!-- Password Modal -->
-  <div id="pwdModal" class="hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm grid place-items-center p-4">
-    <div class="card w-full max-w-sm p-5">
+  <!-- 비밀번호 모달 -->
+  <div id="pwdModal" class="hidden fixed inset-0 z-40 bg-black/40 grid place-items-center p-4">
+    <div class="card w-full max-w-sm">
       <h3 class="font-semibold">관리자 비밀번호</h3>
       <input id="pwd" type="password" class="input mt-3" placeholder="••••••" />
       <div class="flex gap-2 mt-4">
         <button id="btnVerify" class="btn btn-primary">확인</button>
         <button id="btnClosePwd" class="btn btn-ghost">닫기</button>
       </div>
-      <p id="sysPwd" class="text-xs text-rose-500 mt-2"></p>
+      <p id="sysPwd" class="text-xs text-rose-400 mt-2"></p>
     </div>
   </div>
 
+  <!-- Toasts -->
+  <div id="toasts" class="fixed top-4 right-4 space-y-2 z-50"></div>
+
   <script>
   (function(){
-    // ▼ 사용자 프로젝트 연결값
+    // ▼ Supabase 연결값 (사용자 프로젝트)
     const SUPABASE_URL = "https://fbyilsyeygaucdbaexut.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZieWlsc3lleWdhdWNkYmFleHV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwOTkyNDEsImV4cCI6MjA3MTY3NTI0MX0.2c-_df6s-3cxa1YkxsqD04Hql_5OXKeTPhidz7jNvQQ";
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const state = { adminOK:false, adminPwd:'', q:'', cat:'전체', entries:[], loading:false };
+    const state = { adminOK:false, adminPwd:'', q:'', cat:'전체', entries:[] };
     const $ = (s) => document.querySelector(s);
-
-    // Theme
-    const prefers = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.classList.toggle('dark', prefers);
-    $('#btnTheme').addEventListener('click', () => document.documentElement.classList.toggle('dark'));
 
     // Toast helper
     function toast(msg, type='ok'){
-      const t = document.createElement('div');
-      t.className = `rounded-xl px-3 py-2 text-sm shadow-soft border-2 ${type==='ok' ? 'bg-brand-600 text-white border-brand-700' : 'bg-rose-600 text-white border-rose-700'}`;
-      t.textContent = msg; $('#toasts').appendChild(t); setTimeout(()=>{ t.remove(); }, 1800);
+      const el = document.createElement('div');
+      el.className = `rounded-xl px-3 py-2 text-sm shadow-soft ${type==='ok'?'bg-brand-600 text-white':'bg-rose-600 text-white'}`;
+      el.textContent = msg; $('#toasts').appendChild(el); setTimeout(()=>el.remove(), 1800);
     }
 
     function setBadge(){ $('#badge').textContent = state.adminOK ? '🔓 관리자 모드' : '🔒 잠금 중'; }
 
-    // Modal open/close
+    // 모달
     const openPwd = () => $('#pwdModal').classList.remove('hidden');
     const closePwd = () => $('#pwdModal').classList.add('hidden');
     $('#btnOpenPwd').addEventListener('click', openPwd);
     $('#btnClosePwd').addEventListener('click', closePwd);
+    $('#btnVerify').addEventListener('click', verifyPwd);
 
     async function verifyPwd(){
-      $('#sysPwd').textContent = '';
-      const value = $('#pwd').value; if(!value){ $('#sysPwd').textContent = '비밀번호를 입력하세요.'; return; }
+      $('#sysPwd').textContent='';
+      const value = $('#pwd').value; if(!value){ $('#sysPwd').textContent='비밀번호를 입력하세요.'; return; }
       const { data, error } = await db.rpc('can_edit', { pwd: value });
-      if(error){ $('#sysPwd').textContent = error.message; state.adminOK=false; setBadge(); return; }
-      if(!data){ $('#sysPwd').textContent = '틀렸습니다.'; state.adminOK=false; setBadge(); return; }
+      if(error){ $('#sysPwd').textContent=error.message; state.adminOK=false; setBadge(); return; }
+      if(!data){ $('#sysPwd').textContent='틀렸습니다.'; state.adminOK=false; setBadge(); return; }
       state.adminOK = true; state.adminPwd = value; setBadge(); closePwd(); toast('관리자 모드 활성화');
     }
-    $('#btnVerify').addEventListener('click', verifyPwd);
 
     async function load(){
       state.q = $('#q').value.trim(); state.cat = $('#filterCat').value; $('#count').textContent='불러오는 중…';
-      let query = db.from('entries').select('*').order('created_at', { ascending:false });
-      if(state.cat !== '전체') query = query.eq('category', state.cat);
+      let query = db.from('entries').select('*').order('created_at',{ascending:false});
+      if(state.cat!=='전체') query = query.eq('category', state.cat);
       if(state.q) query = query.or(`word.ilike.%${state.q}%,meaning.ilike.%${state.q}%,method.ilike.%${state.q}%`);
       const { data, error } = await query;
-      if(error){ $('#count').textContent='오류'; toast(error.message, 'err'); return; }
-      state.entries = data || []; $('#count').textContent = `총 ${state.entries.length}개 결과`;
+      if(error){ $('#count').textContent='오류'; toast(error.message,'err'); return; }
+      state.entries = data||[]; $('#count').textContent = `총 ${state.entries.length}개 결과`;
       renderList();
     }
 
+    function esc(s=''){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[m])); }
+    function escAttr(s=''){ return esc(s).replace(/\n/g,' '); }
+
     function renderList(){
-      const root = $('#list'); root.innerHTML = '';
+      const root = $('#list'); root.innerHTML='';
       for(const e of state.entries){
-        const li = document.createElement('li'); li.className = 'card p-5';
+        const li = document.createElement('li');
+        li.className='card';
         li.innerHTML = `
           <div class="flex items-start justify-between">
             <div>
               <div class="text-base font-semibold">${esc(e.word)}</div>
-              <div class="text-xs text-slate-500 dark:text-slate-400">${new Date(e.created_at).toLocaleString()}</div>
+              <div class="text-xs text-slate-400">${new Date(e.created_at).toLocaleString()}</div>
             </div>
-            <span class="tag">${esc(e.category)}</span>
+            <span class="pill">${esc(e.category)}</span>
           </div>
           <div class="mt-3 text-sm whitespace-pre-wrap">${esc(e.meaning)}</div>
-          ${e.method ? `<div class="mt-2 text-xs text-slate-500">만든방법: ${esc(e.method)}</div>` : ''}
-
+          ${e.method?`<div class="mt-2 text-xs text-slate-400">만든방법: ${esc(e.method)}</div>`:''}
           <div class="divider"></div>
-
-          <div class="mt-1 flex gap-2 justify-end">
+          <div class="flex gap-2 justify-end">
             <button class="btn btn-ghost" data-edit="${e.id}">수정</button>
             <button class="btn btn-ghost" data-del="${e.id}">삭제</button>
           </div>
-
-          <div id="edit-${e.id}" class="hidden mt-4 grid gap-2">
+          <div id="edit-${e.id}" class="hidden mt-3 grid gap-2">
             <div class="grid md:grid-cols-2 gap-2">
               <input id="ew-${e.id}" class="input" value="${escAttr(e.word)}" />
               <select id="ec-${e.id}" class="input">
@@ -217,44 +214,46 @@
               <button class="btn btn-primary" data-save="${e.id}">저장</button>
               <button class="btn btn-ghost" data-cancel="${e.id}">취소</button>
             </div>
-          </div>
-        `;
+          </div>`;
         root.appendChild(li);
       }
     }
 
-    function listClick(ev){
-      const t = ev.target; const id = t.getAttribute('data-edit') || t.getAttribute('data-del') || t.getAttribute('data-save') || t.getAttribute('data-cancel');
-      if(!id) return; if(t.hasAttribute('data-edit')) return openEdit(id); if(t.hasAttribute('data-cancel')) return closeEdit(id);
-      if(t.hasAttribute('data-save')) return saveEdit(id); if(t.hasAttribute('data-del')) return removeEntry(id);
-    }
     document.addEventListener('click', (ev)=>{
-      if(ev.target.closest('#list')) listClick(ev);
+      const t = ev.target; const id = t.getAttribute('data-edit')||t.getAttribute('data-del')||t.getAttribute('data-save')||t.getAttribute('data-cancel');
+      if(!id) return;
+      if(t.hasAttribute('data-edit')){ if(!state.adminOK){ toast('먼저 관리자 인증을 해주세요','err'); return; } document.getElementById('edit-'+id).classList.remove('hidden'); return; }
+      if(t.hasAttribute('data-cancel')){ document.getElementById('edit-'+id).classList.add('hidden'); return; }
+      if(t.hasAttribute('data-save')) return saveEdit(id);
+      if(t.hasAttribute('data-del')) return removeEntry(id);
     });
-
-    function openEdit(id){ if(!state.adminOK){ toast('먼저 관리자 인증을 해주세요','err'); return; } $('#edit-'+id).classList.remove('hidden'); }
-    function closeEdit(id){ $('#edit-'+id).classList.add('hidden'); }
 
     async function saveEdit(id){
       if(!state.adminOK){ toast('먼저 관리자 인증을 해주세요','err'); return; }
-      const word = $('#ew-'+id).value.trim(); const meaning = $('#em-'+id).value.trim(); const category = $('#ec-'+id).value; const method = $('#ed-'+id).value.trim();
-      if(!word || !meaning){ toast('단어/뜻은 필수입니다','err'); return; }
-      const { error } = await db.rpc('entry_update_admin', { p_id:id, p_word:word, p_meaning:meaning, p_category:category, p_method:method, p_pwd: state.adminPwd });
+      const word = document.getElementById('ew-'+id).value.trim();
+      const meaning = document.getElementById('em-'+id).value.trim();
+      const category = document.getElementById('ec-'+id).value;
+      const method = document.getElementById('ed-'+id).value.trim();
+      if(!word||!meaning){ toast('단어/뜻은 필수입니다','err'); return; }
+      const { error } = await db.rpc('entry_update_admin',{ p_id:id, p_word:word, p_meaning:meaning, p_category:category, p_method:method, p_pwd: state.adminPwd });
       if(error){ toast('수정 오류: '+error.message,'err'); return; }
-      toast('수정 완료'); closeEdit(id); load();
+      toast('수정 완료'); load();
     }
 
     async function removeEntry(id){
       if(!state.adminOK){ toast('먼저 관리자 인증을 해주세요','err'); return; }
       if(!confirm('정말 삭제할까요?')) return;
-      const { error } = await db.rpc('entry_delete_admin', { p_id:id, p_pwd: state.adminPwd });
+      const { error } = await db.rpc('entry_delete_admin',{ p_id:id, p_pwd: state.adminPwd });
       if(error){ toast('삭제 오류: '+error.message,'err'); return; }
       toast('삭제 완료'); load();
     }
 
     async function addEntry(){
-      const word = $('#newWord').value.trim(); const meaning = $('#newMeaning').value.trim(); const category = $('#newCat').value; const method = $('#newMethod').value.trim();
-      if(!word || !meaning){ $('#sysAdd').textContent='단어/뜻은 필수입니다.'; return; }
+      const word = $('#newWord').value.trim();
+      const meaning = $('#newMeaning').value.trim();
+      const category = $('#newCat').value;
+      const method = $('#newMethod').value.trim();
+      if(!word||!meaning){ $('#sysAdd').textContent='단어/뜻은 필수입니다.'; return; }
       const { error } = await db.from('entries').insert([{ word, meaning, category, method }]);
       if(error){ $('#sysAdd').textContent='추가 오류: '+error.message; return; }
       $('#sysAdd').textContent=''; $('#newWord').value=''; $('#newMeaning').value=''; $('#newMethod').value=''; toast('추가 완료'); load();
@@ -263,11 +262,8 @@
     $('#btnAdd').addEventListener('click', addEntry);
     $('#btnClear').addEventListener('click', ()=>{ $('#newWord').value=''; $('#newMeaning').value=''; $('#newMethod').value=''; });
     $('#btnReload').addEventListener('click', load);
-    $('#q').addEventListener('input', ()=>{ clearTimeout(window._q); window._q = setTimeout(load, 250); });
+    $('#q').addEventListener('input', ()=>{ clearTimeout(window._q); window._q=setTimeout(load,250); });
     $('#filterCat').addEventListener('change', load);
-
-    function esc(s=''){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[m])); }
-    function escAttr(s=''){ return esc(s).replace(/\n/g,' '); }
 
     setBadge(); load();
   })();
