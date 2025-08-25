@@ -4,44 +4,34 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>단어 등록·검색 (Supabase 저장)</title>
-  <!-- BUILD MARKER: DARK_SOLID_BLUE_BORDERED_2025-08-25_04 -->
+  <!-- BUILD MARKER: DARK_BLUE_SOLID_CARDS_BORDER2_2025-08-25_05 -->
   <script>
-    // Tailwind (CDN)
-    tailwind = {
-      config: {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            fontFamily: { sans: ["Inter","Pretendard","ui-sans-serif","system-ui"] },
-            colors: { brand: { 500:'#3b82f6', 600:'#2563eb', 700:'#1d4ed8' } }
-          }
-        }
-      }
-    }
+    tailwind = { config: { darkMode:'class', theme:{ extend:{ fontFamily:{ sans:["Inter","Pretendard","ui-sans-serif","system-ui"] }, colors:{ brand:{600:'#2563eb',700:'#1d4ed8'} } } } } }
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root{ color-scheme: dark }
     html,body{ height:100% }
-    body{ font-family: Inter, Pretendard, ui-sans-serif, system-ui; }
-    /* ▶ 단색(그라데이션/패턴 없음), 기존보다 한 톤 밝은 네이비 */
-    .page-solid{ background-color:#0f233d; }
-    /* UI */
-    .card{ @apply rounded-lg border-2 border-slate-700/70 bg-slate-900/70 backdrop-blur px-5 py-4; }
-    .pill{ @apply text-xs px-2.5 py-1 rounded-full border-2 border-slate-700/70 bg-slate-900/80; }
-    .input{ @apply w-full rounded-lg border-2 border-slate-700/70 bg-slate-900/90 text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/40; }
+    body{ font-family: Inter, Pretendard, ui-sans-serif, system-ui }
+    /* 배경: 단색 네이비 */
+    .page-solid{ background:#112a4a }
+    /* ▶ 테두리 스타일 통일(2px) */
+    .border-strong{ border-width:2px !important }
+    .card{ @apply rounded-xl border-strong border-slate-600/70 bg-slate-900/70 backdrop-blur px-5 py-4; }
+    .pill{ @apply text-xs px-2.5 py-1 rounded-full border-strong border-slate-600/70 bg-slate-900/80; }
+    .input{ @apply w-full rounded-lg border-strong border-slate-600/70 bg-slate-900/90 text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/40; }
     .btn{ @apply inline-flex items-center justify-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold; }
     .btn-primary{ @apply bg-brand-600 text-white hover:bg-brand-700; }
-    .btn-ghost{ @apply border-2 border-slate-700/70 bg-slate-900/70 hover:bg-slate-800/70; }
-    .divider{ @apply h-px bg-slate-800 my-3; }
+    .btn-ghost{ @apply border-strong border-slate-600/70 bg-slate-900/70 hover:bg-slate-800/70; }
+    .divider{ @apply h-px bg-slate-700/80 my-3; }
+    /* 목록 카드의 시각적 구분 */
+    .entry{ @apply card; }
   </style>
 </head>
 <body class="min-h-full page-solid text-slate-100">
-  <!-- 헤더 -->
   <header class="sticky top-0 z-20">
     <div class="max-w-6xl mx-auto px-4 pt-5 pb-3">
       <div class="flex items-center justify-between">
@@ -62,7 +52,6 @@
 
   <main class="max-w-6xl mx-auto px-4 pb-16 pt-4">
     <div class="grid md:grid-cols-3 gap-6">
-      <!-- 등록 -->
       <section class="card md:col-span-1">
         <h2 class="font-semibold">단어 등록</h2>
         <div class="mt-3 grid gap-3">
@@ -90,7 +79,6 @@
         </div>
       </section>
 
-      <!-- 검색/목록 -->
       <section class="card md:col-span-2">
         <h2 class="font-semibold">검색</h2>
         <div class="mt-3 grid md:grid-cols-3 gap-3">
@@ -106,7 +94,6 @@
           <span id="count">–</span>
           <button id="btnReload" class="btn btn-ghost px-2 py-1">새로고침</button>
         </div>
-
         <ul id="list" class="mt-4 grid md:grid-cols-2 gap-4"></ul>
       </section>
     </div>
@@ -125,64 +112,50 @@
     </div>
   </div>
 
-  <!-- Toasts -->
   <div id="toasts" class="fixed top-4 right-4 space-y-2 z-50"></div>
 
   <script>
   (function(){
-    // Supabase 연결값
     const SUPABASE_URL = "https://fbyilsyeygaucdbaexut.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZieWlsc3lleWdhdWNkYmFleHV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwOTkyNDEsImV4cCI6MjA3MTY3NTI0MX0.2c-_df6s-3cxa1YkxsqD04Hql_5OXKeTPhidz7jNvQQ";
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const state = { adminOK:false, adminPwd:'', q:'', cat:'전체', entries:[] };
-    const $ = (s) => document.querySelector(s);
+    const $ = (s)=>document.querySelector(s);
 
-    // Toast helper
-    function toast(msg, type='ok'){
-      const el = document.createElement('div');
-      el.className = `rounded-lg px-3 py-2 text-sm ${type==='ok'?'bg-brand-600 text-white':'bg-rose-600 text-white'}`;
-      el.textContent = msg; $('#toasts').appendChild(el); setTimeout(()=>el.remove(), 1600);
-    }
+    function toast(msg,type='ok'){ const el = document.createElement('div'); el.className=`rounded-lg px-3 py-2 text-sm ${type==='ok'?'bg-brand-600 text-white':'bg-rose-600 text-white'}`; el.textContent=msg; $('#toasts').appendChild(el); setTimeout(()=>el.remove(),1600); }
+    function setBadge(){ $('#badge').textContent = state.adminOK? '🔓 관리자 모드' : '🔒 잠금 중'; }
 
-    function setBadge(){ $('#badge').textContent = state.adminOK ? '🔓 관리자 모드' : '🔒 잠금 중'; }
-
-    // 모달
-    const openPwd = () => $('#pwdModal').classList.remove('hidden');
-    const closePwd = () => $('#pwdModal').classList.add('hidden');
-    $('#btnOpenPwd').addEventListener('click', openPwd);
-    $('#btnClosePwd').addEventListener('click', closePwd);
+    const openPwd = ()=>$('#pwdModal').classList.remove('hidden');
+    const closePwd = ()=>$('#pwdModal').classList.add('hidden');
+    $('#btnOpenPwd').addEventListener('click', openPwd); $('#btnClosePwd').addEventListener('click', closePwd);
     $('#btnVerify').addEventListener('click', verifyPwd);
 
     async function verifyPwd(){
-      $('#sysPwd').textContent='';
-      const value = $('#pwd').value; if(!value){ $('#sysPwd').textContent='비밀번호를 입력하세요.'; return; }
+      $('#sysPwd').textContent=''; const value=$('#pwd').value; if(!value){ $('#sysPwd').textContent='비밀번호를 입력하세요.'; return; }
       const { data, error } = await db.rpc('can_edit', { pwd: value });
       if(error){ $('#sysPwd').textContent=error.message; state.adminOK=false; setBadge(); return; }
       if(!data){ $('#sysPwd').textContent='틀렸습니다.'; state.adminOK=false; setBadge(); return; }
-      state.adminOK = true; state.adminPwd = value; setBadge(); closePwd(); toast('관리자 모드 활성화');
+      state.adminOK=true; state.adminPwd=value; setBadge(); closePwd(); toast('관리자 모드 활성화');
     }
 
     async function load(){
-      state.q = $('#q').value.trim(); state.cat = $('#filterCat').value; $('#count').textContent='불러오는 중…';
-      let query = db.from('entries').select('*').order('created_at',{ascending:false});
-      if(state.cat!=='전체') query = query.eq('category', state.cat);
-      if(state.q) query = query.or(`word.ilike.%${state.q}%,meaning.ilike.%${state.q}%,method.ilike.%${state.q}%`);
-      const { data, error } = await query;
-      if(error){ $('#count').textContent='오류'; toast(error.message,'err'); return; }
-      state.entries = data||[]; $('#count').textContent = `총 ${state.entries.length}개 결과`;
-      renderList();
+      state.q=$('#q').value.trim(); state.cat=$('#filterCat').value; $('#count').textContent='불러오는 중…';
+      let query=db.from('entries').select('*').order('created_at',{ascending:false});
+      if(state.cat!=='전체') query=query.eq('category', state.cat);
+      if(state.q) query=query.or(`word.ilike.%${state.q}%,meaning.ilike.%${state.q}%,method.ilike.%${state.q}%`);
+      const { data, error } = await query; if(error){ $('#count').textContent='오류'; toast(error.message,'err'); return; }
+      state.entries=data||[]; $('#count').textContent=`총 ${state.entries.length}개 결과`; renderList();
     }
 
     function esc(s=''){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[m])); }
     function escAttr(s=''){ return esc(s).replace(/\n/g,' '); }
 
     function renderList(){
-      const root = $('#list'); root.innerHTML='';
+      const root=$('#list'); root.innerHTML='';
       for(const e of state.entries){
-        const li = document.createElement('li');
-        li.className='card';
-        li.innerHTML = `
+        const li=document.createElement('li'); li.className='entry';
+        li.innerHTML=`
           <div class="flex items-start justify-between">
             <div>
               <div class="text-base font-semibold">${esc(e.word)}</div>
@@ -200,9 +173,7 @@
           <div id="edit-${e.id}" class="hidden mt-3 grid gap-2">
             <div class="grid md:grid-cols-2 gap-2">
               <input id="ew-${e.id}" class="input" value="${escAttr(e.word)}" />
-              <select id="ec-${e.id}" class="input">
-                ${['있는말','있던말','만든말'].map(c=>`<option ${c===e.category?'selected':''}>${c}</option>`).join('')}
-              </select>
+              <select id="ec-${e.id}" class="input">${['있는말','있던말','만든말'].map(c=>`<option ${c===e.category?'selected':''}>${c}</option>`).join('')}</select>
             </div>
             <textarea id="em-${e.id}" rows="3" class="input">${esc(e.meaning)}</textarea>
             <input id="ed-${e.id}" class="input" value="${escAttr(e.method||'')}" placeholder="만든방법" />
@@ -215,51 +186,23 @@
       }
     }
 
-    document.addEventListener('click', (ev)=>{
-      const t = ev.target; const id = t.getAttribute('data-edit')||t.getAttribute('data-del')||t.getAttribute('data-save')||t.getAttribute('data-cancel');
-      if(!id) return;
+    document.addEventListener('click',(ev)=>{
+      const t=ev.target; const id=t.getAttribute('data-edit')||t.getAttribute('data-del')||t.getAttribute('data-save')||t.getAttribute('data-cancel'); if(!id) return;
       if(t.hasAttribute('data-edit')){ if(!state.adminOK){ toast('먼저 관리자 인증을 해주세요','err'); return; } document.getElementById('edit-'+id).classList.remove('hidden'); return; }
       if(t.hasAttribute('data-cancel')){ document.getElementById('edit-'+id).classList.add('hidden'); return; }
       if(t.hasAttribute('data-save')) return saveEdit(id);
       if(t.hasAttribute('data-del')) return removeEntry(id);
     });
 
-    async function saveEdit(id){
-      if(!state.adminOK){ toast('먼저 관리자 인증을 해주세요','err'); return; }
-      const word = document.getElementById('ew-'+id).value.trim();
-      const meaning = document.getElementById('em-'+id).value.trim();
-      const category = document.getElementById('ec-'+id).value;
-      const method = document.getElementById('ed-'+id).value.trim();
-      if(!word||!meaning){ toast('단어/뜻은 필수입니다','err'); return; }
-      const { error } = await db.rpc('entry_update_admin',{ p_id:id, p_word:word, p_meaning:meaning, p_category:category, p_method:method, p_pwd: state.adminPwd });
-      if(error){ toast('수정 오류: '+error.message,'err'); return; }
-      toast('수정 완료'); load();
-    }
+    async function saveEdit(id){ if(!state.adminOK){ toast('먼저 관리자 인증을 해주세요','err'); return; }
+      const word=document.getElementById('ew-'+id).value.trim(); const meaning=document.getElementById('em-'+id).value.trim(); const category=document.getElementById('ec-'+id).value; const method=document.getElementById('ed-'+id).value.trim(); if(!word||!meaning){ toast('단어/뜻은 필수입니다','err'); return; }
+      const { error }=await db.rpc('entry_update_admin',{ p_id:id,p_word:word,p_meaning:meaning,p_category:category,p_method:method,p_pwd:state.adminPwd }); if(error){ toast('수정 오류: '+error.message,'err'); return; } toast('수정 완료'); load(); }
 
-    async function removeEntry(id){
-      if(!state.adminOK){ toast('먼저 관리자 인증을 해주세요','err'); return; }
-      if(!confirm('정말 삭제할까요?')) return;
-      const { error } = await db.rpc('entry_delete_admin',{ p_id:id, p_pwd: state.adminPwd });
-      if(error){ toast('삭제 오류: '+error.message,'err'); return; }
-      toast('삭제 완료'); load();
-    }
+    async function removeEntry(id){ if(!state.adminOK){ toast('먼저 관리자 인증을 해주세요','err'); return; } if(!confirm('정말 삭제할까요?')) return; const { error }=await db.rpc('entry_delete_admin',{ p_id:id,p_pwd:state.adminPwd }); if(error){ toast('삭제 오류: '+error.message,'err'); return; } toast('삭제 완료'); load(); }
 
-    async function addEntry(){
-      const word = $('#newWord').value.trim();
-      const meaning = $('#newMeaning').value.trim();
-      const category = $('#newCat').value;
-      const method = $('#newMethod').value.trim();
-      if(!word||!meaning){ $('#sysAdd').textContent='단어/뜻은 필수입니다.'; return; }
-      const { error } = await db.from('entries').insert([{ word, meaning, category, method }]);
-      if(error){ $('#sysAdd').textContent='추가 오류: '+error.message; return; }
-      $('#sysAdd').textContent=''; $('#newWord').value=''; $('#newMeaning').value=''; $('#newMethod').value=''; toast('추가 완료'); load();
-    }
+    async function addEntry(){ const word=$('#newWord').value.trim(); const meaning=$('#newMeaning').value.trim(); const category=$('#newCat').value; const method=$('#newMethod').value.trim(); if(!word||!meaning){ $('#sysAdd').textContent='단어/뜻은 필수입니다.'; return; } const { error }=await db.from('entries').insert([{ word,meaning,category,method }]); if(error){ $('#sysAdd').textContent='추가 오류: '+error.message; return; } $('#sysAdd').textContent=''; $('#newWord').value=''; $('#newMeaning').value=''; $('#newMethod').value=''; toast('추가 완료'); load(); }
 
-    $('#btnAdd').addEventListener('click', addEntry);
-    $('#btnClear').addEventListener('click', ()=>{ $('#newWord').value=''; $('#newMeaning').value=''; $('#newMethod').value=''; });
-    $('#btnReload').addEventListener('click', load);
-    $('#q').addEventListener('input', ()=>{ clearTimeout(window._q); window._q=setTimeout(load,250); });
-    $('#filterCat').addEventListener('change', load);
+    $('#btnAdd').addEventListener('click', addEntry); $('#btnClear').addEventListener('click', ()=>{ $('#newWord').value=''; $('#newMeaning').value=''; $('#newMethod').value=''; }); $('#btnReload').addEventListener('click', load); $('#q').addEventListener('input', ()=>{ clearTimeout(window._q); window._q=setTimeout(load,250); }); $('#filterCat').addEventListener('change', load);
 
     setBadge(); load();
   })();
