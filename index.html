@@ -3,260 +3,229 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>단어 사전 · 안전버전</title>
-  <!-- Tailwind (CDN) -->
-  <script>tailwind = { config: { darkMode: 'class' } };</script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>단어 사전 · 초미니 안전버전</title>
+  <style>
+    /* 최대한 단순하게: 검은 글자 / 흰 배경 (스타일 최소화) */
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;padding:20px;background:#fff;color:#111}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .card{border:1px solid #ddd;border-radius:10px;padding:12px;margin:12px 0}
+    .btn{padding:6px 10px;border:1px solid #333;background:#111;color:#fff;border-radius:8px;cursor:pointer}
+    .btn.sec{background:#fff;color:#111}
+    .muted{color:#666;font-size:12px}
+    .tag{border:1px solid #aaa;border-radius:999px;padding:2px 8px;font-size:12px}
+    input,select,textarea{border:1px solid #bbb;border-radius:8px;padding:6px 8px}
+    textarea{width:100%}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .list{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    code,pre{background:#f6f8fa;border:1px solid #e5e7eb;border-radius:8px;padding:6px}
+  </style>
   <!-- Supabase JS v2 (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    html { background: #0b1220; }
-    body { background: #0b1220; color: #e5e7eb; }
-    .card { background: rgba(17,24,39,.7); border: 1px solid rgba(148,163,184,.2); border-radius: 16px; }
-    .input { background:#0f172a; border:1px solid #334155; color:#e5e7eb; border-radius:10px; padding:.55rem .75rem; font-size:.9rem; width:100%; }
-    .btn { background:#10b981; color:white; border-radius:10px; padding:.55rem .9rem; font-weight:600; }
-    .btn-outline { border:1px solid #475569; border-radius:10px; padding:.45rem .8rem; }
-    .tag { border:1px solid #334155; border-radius:9999px; padding:.15rem .6rem; font-size:.75rem; }
-    .muted { color:#94a3b8; }
-    a { color:#93c5fd }
-    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:.75rem; }
-    .grid3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:.75rem; }
-  </style>
 </head>
 <body>
-  <div class="max-w-5xl mx-auto px-4 py-6">
-    <header class="flex items-center justify-between mb-6">
-      <h1 class="text-xl font-semibold">단어 등록·검색·수정/삭제 (안전버전)</h1>
-      <div class="flex items-center gap-2">
-        <span id="adminBadge" class="tag">🔒 잠금 중</span>
-      </div>
-    </header>
+  <h1>단어 등록·검색·수정/삭제 — 초미니 안전버전</h1>
+  <noscript>이 페이지는 JavaScript가 필요합니다.</noscript>
 
-    <!-- 관리자 비밀번호 영역 -->
-    <div class="card p-4 mb-6">
-      <div class="flex items-center gap-2 flex-wrap">
-        <input id="pwd" type="password" class="input w-64" placeholder="관리자 비밀번호" />
-        <button id="btnCheck" class="btn">확인</button>
-        <span class="muted text-sm">* 통과해야 수정/삭제가 됩니다.</span>
-      </div>
-      <div id="sysmsg" class="text-xs mt-2 text-rose-400"></div>
+  <div class="card">
+    <div class="row">
+      <b>관리자 비밀번호</b>
+      <input id="pwd" type="password" placeholder="••••••" />
+      <button class="btn" id="btnVerify">확인</button>
+      <span id="badge" class="tag">🔒 잠금 중</span>
     </div>
+    <div id="sys" class="muted" style="margin-top:6px"></div>
+  </div>
 
-    <!-- 등록 폼 -->
-    <div class="card p-4 mb-6">
-      <h2 class="font-semibold mb-3">단어 등록</h2>
-      <div class="grid2 mb-2">
-        <div>
-          <div class="text-xs muted mb-1">단어</div>
-          <input id="newWord" class="input" placeholder="예: 빗모질다" />
-        </div>
-        <div>
-          <div class="text-xs muted mb-1">분류</div>
-          <select id="newCat" class="input">
-            <option>있는말</option>
-            <option>있던말</option>
-            <option>만든말</option>
-          </select>
-        </div>
+  <div class="card">
+    <h3>단어 등록</h3>
+    <div class="grid2">
+      <div>
+        <div class="muted">단어</div>
+        <input id="newWord" placeholder="예: 빗모질다" />
       </div>
-      <div class="mb-2">
-        <div class="text-xs muted mb-1">뜻</div>
-        <textarea id="newMeaning" class="input" rows="3" placeholder="예: 횡포(橫暴)하다"></textarea>
-      </div>
-      <div class="mb-3">
-        <div class="text-xs muted mb-1">만든방법</div>
-        <input id="newMethod" class="input" placeholder="예: pisk-(橫) + mwǒtil-(暴) 직역" />
-      </div>
-      <div class="flex gap-2">
-        <button id="btnAdd" class="btn">추가</button>
-        <button id="btnClear" class="btn-outline">초기화</button>
-      </div>
-    </div>
-
-    <!-- 검색 -->
-    <div class="card p-4 mb-4">
-      <h2 class="font-semibold mb-3">검색</h2>
-      <div class="grid3">
-        <input id="q" class="input" placeholder="단어/뜻/만든방법 검색" />
-        <select id="filterCat" class="input">
-          <option>전체</option>
+      <div>
+        <div class="muted">분류</div>
+        <select id="newCat">
           <option>있는말</option>
           <option>있던말</option>
           <option>만든말</option>
         </select>
-        <button id="btnReload" class="btn">새로고침</button>
       </div>
-      <div id="count" class="text-xs muted mt-2"></div>
     </div>
-
-    <!-- 목록 -->
-    <ul id="list" class="grid2"></ul>
+    <div style="margin-top:8px">
+      <div class="muted">뜻</div>
+      <textarea id="newMeaning" rows="3" placeholder="예: 횡포(橫暴)하다"></textarea>
+    </div>
+    <div style="margin-top:8px">
+      <div class="muted">만든방법</div>
+      <input id="newMethod" placeholder="예: pisk-(橫) + mwǒtil-(暴) 직역" />
+    </div>
+    <div style="margin-top:8px" class="row">
+      <button class="btn" id="btnAdd">추가</button>
+      <button class="btn sec" id="btnClear">초기화</button>
+    </div>
   </div>
 
-  <script defer>
+  <div class="card">
+    <h3>검색</h3>
+    <div class="row">
+      <input id="q" placeholder="단어/뜻/만든방법 검색" style="min-width:240px" />
+      <select id="filterCat">
+        <option>전체</option>
+        <option>있는말</option>
+        <option>있던말</option>
+        <option>만든말</option>
+      </select>
+      <button class="btn" id="btnReload">새로고침</button>
+      <span id="count" class="muted"></span>
+    </div>
+  </div>
+
+  <div id="list" class="list"></div>
+
+  <div class="card">
+    <h3>디버그 로그</h3>
+    <pre id="log" style="max-height:220px;overflow:auto"></pre>
+  </div>
+
+  <script>
   (function(){
+    // ⛳ 프로젝트 연결 — 사용자님의 값
     const SUPABASE_URL = "https://fbyilsyeygaucdbaexut.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZieWlsc3lleWdhdWNkYmFleHV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwOTkyNDEsImV4cCI6MjA3MTY3NTI0MX0.2c-_df6s-3cxa1YkxsqD04Hql_5OXKeTPhidz7jNvQQ";
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const state = {
-      adminOK: false,
-      adminPwd: '',
-      q: '',
-      cat: '전체',
-      entries: [],
-      loading: false,
-    };
+    const state = { adminOK:false, adminPwd:'', q:'', cat:'전체', entries:[], loading:false };
 
-    const el = (id) => document.getElementById(id);
-    const $list = el('list');
-    const $count = el('count');
-    const $sys = el('sysmsg');
+    // --- helpers ---
+    const $ = (id) => document.getElementById(id);
+    const log = (m) => { const p = $('log'); p.textContent += m + "\n"; p.scrollTop = p.scrollHeight; }
+    window.onerror = function(message, src, line, col, err){ log('JS ERROR: '+message+' @'+src+':'+line); };
+    const esc = (s='') => String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[m]));
 
-    function setBadge(){
-      const b = el('adminBadge');
-      b.textContent = state.adminOK ? '🔓 관리자 모드' : '🔒 잠금 중';
-    }
+    function setBadge(){ $('badge').textContent = state.adminOK ? '🔓 관리자 모드' : '🔒 잠금 중'; }
 
     async function verifyPwd(){
-      state.adminPwd = el('pwd').value;
+      state.adminPwd = $('pwd').value;
       if(!state.adminPwd){ alert('비밀번호 입력'); return; }
-      $sys.textContent = '';
-      try{
-        const { data, error } = await db.rpc('can_edit', { pwd: state.adminPwd });
-        if(error) throw error;
-        if(!data){ state.adminOK = false; setBadge(); alert('틀린 비밀번호'); return; }
-        state.adminOK = true; setBadge(); alert('관리자 모드 ON');
-      }catch(e){
-        $sys.textContent = '검증 오류: ' + (e.message || e);
-      }
+      $('sys').textContent='';
+      const { data, error } = await db.rpc('can_edit', { pwd: state.adminPwd });
+      log('RPC can_edit → data:'+data+' error:'+(error?error.message:'none'));
+      if(error){ $('sys').textContent = '검증 오류: '+error.message; state.adminOK=false; setBadge(); return; }
+      if(!data){ alert('틀린 비밀번호'); state.adminOK=false; setBadge(); return; }
+      state.adminOK=true; setBadge(); alert('관리자 모드 ON');
     }
 
     async function load(){
-      state.q = el('q').value.trim();
-      state.cat = el('filterCat').value;
-      $sys.textContent = '';
-      state.loading = true; renderList();
-      try{
-        let query = db.from('entries').select('*').order('created_at', { ascending: false });
-        if(state.cat !== '전체') query = query.eq('category', state.cat);
-        if(state.q) query = query.or(`word.ilike.%${state.q}%,meaning.ilike.%${state.q}%,method.ilike.%${state.q}%`);
-        const { data, error } = await query;
-        if(error) throw error;
-        state.entries = data || [];
-      }catch(e){ $sys.textContent = '불러오기 오류: ' + (e.message || e); }
-      finally{ state.loading = false; renderList(); }
+      state.q = $('q').value.trim();
+      state.cat = $('filterCat').value;
+      $('sys').textContent=''; $('count').textContent='불러오는 중…';
+      let query = db.from('entries').select('*').order('created_at', { ascending:false });
+      if(state.cat!=='전체') query = query.eq('category', state.cat);
+      if(state.q) query = query.or(`word.ilike.%${state.q}%,meaning.ilike.%${state.q}%,method.ilike.%${state.q}%`);
+      const { data, error } = await query;
+      log('select entries → '+ (error?('ERROR '+error.message):('ok '+(data?data.length:0)+' rows')) );
+      if(error){ $('sys').textContent = '불러오기 오류: '+error.message; $('count').textContent='오류'; return; }
+      state.entries = data || []; render();
     }
 
-    function renderList(){
-      $count.textContent = state.loading ? '불러오는 중…' : `총 ${state.entries.length}개 결과`;
-      $list.innerHTML = '';
+    function render(){
+      $('count').textContent = '총 '+state.entries.length+'개 결과';
+      const root = $('list'); root.innerHTML='';
       for(const e of state.entries){
-        const li = document.createElement('li');
-        li.className = 'card p-4';
+        const li = document.createElement('div'); li.className='card';
         li.innerHTML = `
-          <div class="flex items-start justify-between">
+          <div class="row" style="justify-content:space-between">
             <div>
-              <div class="text-lg font-semibold">${escapeHtml(e.word)}</div>
-              <div class="text-xs muted">${new Date(e.created_at).toLocaleString()}</div>
+              <div style="font-weight:600">${esc(e.word)}</div>
+              <div class="muted">${new Date(e.created_at).toLocaleString()}</div>
             </div>
-            <span class="tag">${escapeHtml(e.category)}</span>
+            <span class="tag">${esc(e.category)}</span>
           </div>
-          <div class="mt-3">${escapeHtml(e.meaning)}</div>
-          ${e.method ? `<div class="mt-2 text-sm muted">만든방법: ${escapeHtml(e.method)}</div>` : ''}
-          <div class="mt-3 flex gap-2">
-            <button class="btn-outline" data-edit="${e.id}">수정</button>
-            <button class="btn-outline" data-del="${e.id}">삭제</button>
+          <div style="margin-top:8px">${esc(e.meaning)}</div>
+          ${e.method?`<div class="muted" style="margin-top:4px">만든방법: ${esc(e.method)}</div>`:''}
+          <div class="row" style="margin-top:8px">
+            <button class="btn sec" data-edit="${e.id}">수정</button>
+            <button class="btn sec" data-del="${e.id}">삭제</button>
           </div>
-          <div class="mt-3 hidden" id="edit-${e.id}">
-            <div class="grid2 mb-2">
-              <input class="input" id="ew-${e.id}" value="${escapeAttr(e.word)}" />
-              <select class="input" id="ec-${e.id}">
+          <div id="edit-${e.id}" style="display:none;margin-top:10px">
+            <div class="grid2">
+              <input id="ew-${e.id}" value="${esc(e.word)}" />
+              <select id="ec-${e.id}">
                 ${['있는말','있던말','만든말'].map(c=>`<option ${c===e.category?'selected':''}>${c}</option>`).join('')}
               </select>
             </div>
-            <div class="mb-2"><textarea class="input" rows="3" id="em-${e.id}">${escapeHtml(e.meaning)}</textarea></div>
-            <div class="mb-2"><input class="input" id="ed-${e.id}" value="${escapeAttr(e.method||'')}" placeholder="만든방법" /></div>
-            <div class="flex gap-2">
+            <div style="margin-top:6px"><textarea id="em-${e.id}" rows="3">${esc(e.meaning)}</textarea></div>
+            <div style="margin-top:6px"><input id="ed-${e.id}" value="${esc(e.method||'')}" placeholder="만든방법" /></div>
+            <div class="row" style="margin-top:8px">
               <button class="btn" data-save="${e.id}">저장</button>
-              <button class="btn-outline" data-cancel="${e.id}">취소</button>
+              <button class="btn sec" data-cancel="${e.id}">취소</button>
             </div>
           </div>
         `;
-        $list.appendChild(li);
+        root.appendChild(li);
       }
     }
 
-    function listClick(e){
-      const t = e.target;
-      const id = t.getAttribute('data-del') || t.getAttribute('data-edit') || t.getAttribute('data-save') || t.getAttribute('data-cancel');
+    async function add(){
+      const word = $('newWord').value.trim();
+      const meaning = $('newMeaning').value.trim();
+      const category = $('newCat').value;
+      const method = $('newMethod').value.trim();
+      if(!word||!meaning){ alert('단어/뜻 필수'); return; }
+      const { error } = await db.from('entries').insert([{ word, meaning, category, method }]);
+      log('insert → ' + (error?('ERROR '+error.message):'ok'));
+      if(error){ $('sys').textContent='추가 오류: '+error.message; return; }
+      $('newWord').value=''; $('newMeaning').value=''; $('newMethod').value='';
+      load();
+    }
+
+    function listClick(ev){
+      const t = ev.target; const id = t.getAttribute('data-edit') || t.getAttribute('data-del') || t.getAttribute('data-save') || t.getAttribute('data-cancel');
       if(!id) return;
-      if(t.hasAttribute('data-edit')) return openEdit(id);
-      if(t.hasAttribute('data-cancel')) return closeEdit(id);
-      if(t.hasAttribute('data-save')) return saveEdit(id);
-      if(t.hasAttribute('data-del')) return removeEntry(id);
+      if(t.hasAttribute('data-edit')){ if(!state.adminOK){alert('비번 먼저 확인하세요');return;} document.getElementById('edit-'+id).style.display='block'; return; }
+      if(t.hasAttribute('data-cancel')){ document.getElementById('edit-'+id).style.display='none'; return; }
+      if(t.hasAttribute('data-save')) return save(id);
+      if(t.hasAttribute('data-del')) return del(id);
     }
 
-    function openEdit(id){ if(!state.adminOK){ alert('먼저 관리자 비밀번호를 통과하세요.'); return; } document.getElementById(`edit-${id}`).classList.remove('hidden'); }
-    function closeEdit(id){ document.getElementById(`edit-${id}`).classList.add('hidden'); }
-
-    async function saveEdit(id){
-      if(!state.adminOK){ alert('먼저 관리자 비밀번호를 통과하세요.'); return; }
-      const word = document.getElementById(`ew-${id}`).value.trim();
-      const category = document.getElementById(`ec-${id}`).value;
-      const meaning = document.getElementById(`em-${id}`).value.trim();
-      const method = document.getElementById(`ed-${id}`).value.trim();
-      if(!word || !meaning){ alert('단어/뜻 필수'); return; }
-      try{
-        const args = { p_id: id, p_word: word, p_meaning: meaning, p_category: category, p_method: method, p_pwd: state.adminPwd };
-        const { data, error } = await db.rpc('entry_update_admin', args);
-        if(error) throw error;
-        await load(); alert('수정 완료');
-      }catch(e){ $sys.textContent = '수정 오류: ' + (e.message || e); alert($sys.textContent); }
+    async function save(id){
+      if(!state.adminOK){ alert('비번 먼저 확인하세요'); return; }
+      const word = document.getElementById('ew-'+id).value.trim();
+      const meaning = document.getElementById('em-'+id).value.trim();
+      const category = document.getElementById('ec-'+id).value;
+      const method = document.getElementById('ed-'+id).value.trim();
+      const args = { p_id:id, p_word:word, p_meaning:meaning, p_category:category, p_method:method, p_pwd:state.adminPwd };
+      const { error } = await db.rpc('entry_update_admin', args);
+      log('rpc entry_update_admin → ' + (error?('ERROR '+error.message):'ok'));
+      if(error){ $('sys').textContent='수정 오류: '+error.message; alert($('sys').textContent); return; }
+      load();
     }
 
-    async function removeEntry(id){
-      if(!state.adminOK){ alert('먼저 관리자 비밀번호를 통과하세요.'); return; }
+    async function del(id){
+      if(!state.adminOK){ alert('비번 먼저 확인하세요'); return; }
       if(!confirm('정말 삭제할까요?')) return;
-      try{
-        const { data, error } = await db.rpc('entry_delete_admin', { p_id: id, p_pwd: state.adminPwd });
-        if(error) throw error;
-        await load(); alert('삭제 완료');
-      }catch(e){ $sys.textContent = '삭제 오류: ' + (e.message || e); alert($sys.textContent); }
+      const { error } = await db.rpc('entry_delete_admin', { p_id:id, p_pwd: state.adminPwd });
+      log('rpc entry_delete_admin → ' + (error?('ERROR '+error.message):'ok'));
+      if(error){ $('sys').textContent='삭제 오류: '+error.message; alert($('sys').textContent); return; }
+      load();
     }
-
-    async function addEntry(){
-      const word = document.getElementById('newWord').value.trim();
-      const meaning = document.getElementById('newMeaning').value.trim();
-      const category = document.getElementById('newCat').value;
-      const method = document.getElementById('newMethod').value.trim();
-      if(!word || !meaning){ alert('단어/뜻 필수'); return; }
-      try{
-        const { error } = await db.from('entries').insert([{ word, meaning, category, method }]);
-        if(error) throw error;
-        document.getElementById('newWord').value = '';
-        document.getElementById('newMeaning').value = '';
-        document.getElementById('newMethod').value = '';
-        await load(); alert('추가 완료');
-      }catch(e){ $sys.textContent = '추가 오류: ' + (e.message || e); alert($sys.textContent); }
-    }
-
-    function escapeHtml(s=''){ return s.replace(/[&<>\"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[m])); }
-    function escapeAttr(s=''){ return escapeHtml(s).replace(/\n/g,' '); }
 
     // 이벤트 바인딩
-    document.addEventListener('click', (ev)=>{
-      if(ev.target.id==='btnCheck') verifyPwd();
-      if(ev.target.id==='btnAdd') addEntry();
-      if(ev.target.id==='btnClear'){ el('newWord').value=''; el('newMeaning').value=''; el('newMethod').value=''; }
+    document.body.addEventListener('click', (ev)=>{
+      if(ev.target.id==='btnVerify') verifyPwd();
+      if(ev.target.id==='btnAdd') add();
+      if(ev.target.id==='btnClear'){ $('newWord').value=''; $('newMeaning').value=''; $('newMethod').value=''; }
       if(ev.target.id==='btnReload') load();
     });
-    $list.addEventListener('click', listClick);
-    el('q').addEventListener('input', ()=>{ clearTimeout(window._t); window._t=setTimeout(load, 250); });
-    el('filterCat').addEventListener('change', load);
+    $('list').addEventListener('click', listClick);
+    $('q').addEventListener('input', ()=>{ clearTimeout(window._q); window._q=setTimeout(load, 250); });
+    $('filterCat').addEventListener('change', load);
 
     setBadge();
-    load();
+    log('페이지 로드');
+    // 연결 건강 점검: 틀린 비번으로 can_edit 한번 호출해 결과 표시
+    db.rpc('can_edit', { pwd: 'wrong' }).then(({data,error})=>{ log('warmup can_edit(wrong) → data:'+data+' error:'+(error?error.message:'none')); load(); });
   })();
   </script>
 </body>
