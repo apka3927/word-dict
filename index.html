@@ -3,50 +3,41 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>단어 사전 — 등록 & 검색 (Supabase 저장)</title>
+    <title>단어 사전 — 등록·검색·수정 (Supabase)</title>
 
-    <!-- Tailwind CDN (dark mode: class) -->
+    <!-- Tailwind (dark mode: class) -->
     <script>tailwind = { config: { darkMode: 'class' } };</script>
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- React 18 UMD + ReactDOM + Babel(브라우저 JSX 변환) -->
+    <!-- React 18, ReactDOM 18, Babel (JSX 변환) -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Supabase JS (v2) UMD -->
+    <!-- Supabase JS v2 UMD -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body class="h-full">
     <div id="root"></div>
 
-    <!-- 앱 코드 -->
     <script type="text/babel">
       const { useEffect, useMemo, useState } = React;
       const CATEGORIES = ["있는말", "있던말", "만든말"];
 
-      // ===================== 중요! 여기를 실제 값으로 교체 =====================
-      // TODO: 아래 두 줄을 본인 프로젝트의 값으로 바꾸세요
-      // Project URL 예시: https://abc123xyz.supabase.co
-      // Publishable(anon) key는 Settings → API Keys → API Keys 탭에서 복사
-      const SUPABASE_URL = "https://fbyilsyeygaucdbaexut.supabase.co";           // ← 여기에 Project URL
-      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZieWlsc3lleWdhdWNkYmFleHV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwOTkyNDEsImV4cCI6MjA3MTY3NTI0MX0.2c-_df6s-3cxa1YkxsqD04Hql_5OXKeTPhidz7jNvQQ";         // ← 여기에 Publishable(anon) key
-      // =======================================================================
-
-      // (선택) 값을 안 바꾸면 경고 표시
+      // 🔧 이 두 줄에 본인 프로젝트 값을 넣으세요 (따옴표 유지)
+      const SUPABASE_URL = "https://fbyilsyeygaucdbaexut.supabase.co";           // ← Project URL
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZieWlsc3lleWdhdWNkYmFleHV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwOTkyNDEsImV4cCI6MjA3MTY3NTI0MX0.2c-_df6s-3cxa1YkxsqD04Hql_5OXKeTPhidz7jNvQQ";         // ← Publishable(anon) key
       if (SUPABASE_URL.includes('YOUR-REF') || SUPABASE_ANON_KEY.includes('YOUR-PUBLISHABLE')) {
-        setTimeout(() => alert('Supabase URL/키를 index.html 상단의 TODO 위치에 넣어주세요.'), 0);
+        setTimeout(() => alert('Supabase URL/키를 상단에 넣어주세요.'), 0);
       }
 
       const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
       function WordRegistry() {
-        // 다크 모드
+        // theme
         const [dark, setDark] = useState(() => {
           const saved = localStorage.getItem('dict.dark');
-          if (saved === null) {
-            return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-          }
+          if (saved === null) return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
           return saved === '1';
         });
         useEffect(() => {
@@ -54,17 +45,21 @@
           localStorage.setItem('dict.dark', dark ? '1' : '0');
         }, [dark]);
 
-        // 데이터 & UI 상태
+        // state
         const [entries, setEntries] = useState([]);
         const [loading, setLoading] = useState(true);
-        const [busy, setBusy] = useState(false);
+        const [busy, setBusy] = useState(false); // 전역 작업 중
         const [err, setErr] = useState("");
 
         const [form, setForm] = useState({ word: '', meaning: '', category: CATEGORIES[0], method: '' });
         const [q, setQ] = useState('');
         const [cat, setCat] = useState('전체');
 
-        // 목록 불러오기
+        // editing state
+        const [editingId, setEditingId] = useState(null);
+        const [edit, setEdit] = useState({ word: '', meaning: '', category: CATEGORIES[0], method: '' });
+
+        // load list
         async function load() {
           setLoading(true); setErr("");
           try {
@@ -77,14 +72,12 @@
             setEntries(data || []);
           } catch (e) {
             console.error(e); setErr(e.message || String(e));
-          } finally {
-            setLoading(false);
-          }
+          } finally { setLoading(false); }
         }
         useEffect(() => { load(); }, []);
         useEffect(() => { const id = setTimeout(load, 250); return () => clearTimeout(id); }, [q, cat]);
 
-        // 추가
+        // create
         async function addEntry() {
           const word = form.word.trim();
           const meaning = form.meaning.trim();
@@ -92,19 +85,17 @@
           const category = form.category;
           if (!word || !meaning) return alert('단어와 뜻은 필수입니다.');
           if (!CATEGORIES.includes(category)) return alert('분류 선택이 올바르지 않습니다.');
-
           setBusy(true); setErr("");
           try {
             const { error } = await db.from('entries').insert([{ word, meaning, category, method }]);
             if (error) throw error;
             setForm({ word: '', meaning: '', category, method: '' });
             await load();
-          } catch (e) {
-            console.error(e); alert('저장 중 오류: ' + (e.message || e));
-          } finally { setBusy(false); }
+          } catch (e) { console.error(e); alert('저장 오류: ' + (e.message || e)); }
+          finally { setBusy(false); }
         }
 
-        // 삭제
+        // delete
         async function removeEntry(id) {
           if (!confirm('정말 삭제할까요?')) return;
           setBusy(true); setErr("");
@@ -112,8 +103,34 @@
             const { error } = await db.from('entries').delete().eq('id', id);
             if (error) throw error;
             await load();
+          } catch (e) { console.error(e); alert('삭제 오류: ' + (e.message || e)); }
+          finally { setBusy(false); }
+        }
+
+        // edit begin/cancel
+        function beginEdit(e) {
+          setEditingId(e.id);
+          setEdit({ word: e.word, meaning: e.meaning, category: e.category, method: e.method || '' });
+        }
+        function cancelEdit() { setEditingId(null); }
+
+        // update
+        async function saveEdit() {
+          const word = edit.word.trim();
+          const meaning = edit.meaning.trim();
+          const method = edit.method.trim();
+          const category = edit.category;
+          if (!word || !meaning) return alert('단어와 뜻은 필수입니다.');
+          if (!CATEGORIES.includes(category)) return alert('분류 선택이 올바르지 않습니다.');
+          setBusy(true); setErr("");
+          try {
+            const { error } = await db.from('entries').update({ word, meaning, category, method }).eq('id', editingId);
+            if (error) throw error;
+            setEditingId(null);
+            await load();
           } catch (e) {
-            console.error(e); alert('삭제 중 오류: ' + (e.message || e));
+            console.error(e);
+            alert('수정 오류: ' + (e.message || e) + '\n⚠️ UPDATE가 금지된 경우 Policies에 update 정책을 추가하세요.');
           } finally { setBusy(false); }
         }
 
@@ -121,14 +138,14 @@
 
         return (
           <div className="min-h-screen bg-gradient-to-b from-white to-slate-50 text-slate-900 dark:from-slate-950 dark:to-slate-900 dark:text-slate-100">
-            {/* 헤더 */}
+            {/* header */}
             <header className="sticky top-0 z-10 backdrop-blur bg-white/60 dark:bg-slate-900/60 border-b border-slate-200/60 dark:border-slate-800/60">
               <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-2xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 grid place-items-center font-bold">📚</div>
                   <div>
-                    <h1 className="text-lg font-semibold">단어 등록·검색 (Supabase 저장)</h1>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">원격 DB(Postgres)에 저장됩니다.</p>
+                    <h1 className="text-lg font-semibold">단어 등록·검색·수정</h1>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Supabase(Postgres) 원격 저장</p>
                   </div>
                 </div>
                 <button onClick={() => setDark(d => !d)} className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="다크모드">
@@ -138,72 +155,40 @@
             </header>
 
             <main className="mx-auto max-w-5xl px-4 py-8 grid lg:grid-cols-3 gap-6">
-              {/* 입력 폼 */}
+              {/* form */}
               <section className="lg:col-span-1 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-5">
                 <h2 className="font-semibold">단어 등록</h2>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">입력 후 "추가"를 누르세요.</p>
 
                 <form onSubmit={onSubmit} className="mt-4 grid gap-3">
                   <Field label="단어">
-                    <input
-                      value={form.word}
-                      onChange={(e) => setForm({ ...form, word: e.target.value })}
-                      placeholder="예: 빗모질다"
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
-                      required
-                    />
+                    <input value={form.word} onChange={(e)=>setForm({ ...form, word: e.target.value })} placeholder="예: 빗모질다" className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400" required />
                   </Field>
                   <Field label="뜻">
-                    <textarea
-                      rows={3}
-                      value={form.meaning}
-                      onChange={(e) => setForm({ ...form, meaning: e.target.value })}
-                      placeholder="예: 횡포(橫暴)하다"
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
-                      required
-                    />
+                    <textarea rows={3} value={form.meaning} onChange={(e)=>setForm({ ...form, meaning: e.target.value })} placeholder="예: 횡포(橫暴)하다" className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400" required />
                   </Field>
                   <Field label="분류">
-                    <select
-                      value={form.category}
-                      onChange={(e) => setForm({ ...form, category: e.target.value })}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
-                    >
+                    <select value={form.category} onChange={(e)=>setForm({ ...form, category: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400">
                       {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </Field>
                   <Field label="만든방법">
-                    <input
-                      value={form.method}
-                      onChange={(e) => setForm({ ...form, method: e.target.value })}
-                      placeholder="예: 빗모질다 pisk-(橫) + mwǒtil-(暴) 직역 이런식으로"
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
-                    />
+                    <input value={form.method} onChange={(e)=>setForm({ ...form, method: e.target.value })} placeholder="예: pisk-(橫) + mwǒtil-(暴) 직역" className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400" />
                   </Field>
-
                   <div className="flex items-center gap-2 pt-1">
                     <button type="submit" disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-500 text-white font-semibold hover:opacity-90 disabled:opacity-40">추가</button>
-                    <button type="button" onClick={() => setForm({ word: '', meaning: '', category: form.category, method: '' })} className="px-3 py-2 rounded-xl border border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20">초기화</button>
+                    <button type="button" onClick={()=>setForm({ word:'', meaning:'', category: form.category, method:'' })} className="px-3 py-2 rounded-xl border border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20">초기화</button>
                   </div>
                 </form>
               </section>
 
-              {/* 검색/리스트 */}
+              {/* search & list */}
               <section className="lg:col-span-2 space-y-4">
                 <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-5">
                   <h2 className="font-semibold">검색</h2>
                   <div className="mt-3 grid md:grid-cols-3 gap-3">
-                    <input
-                      value={q}
-                      onChange={(e) => setQ(e.target.value)}
-                      placeholder="단어/뜻/만든방법 검색..."
-                      className="md:col-span-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
-                    />
-                    <select
-                      value={cat}
-                      onChange={(e) => setCat(e.target.value)}
-                      className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
-                    >
+                    <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="단어/뜻/만든방법 검색..." className="md:col-span-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400" />
+                    <select value={cat} onChange={(e)=>setCat(e.target.value)} className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400">
                       <option value="전체">전체</option>
                       {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
@@ -214,22 +199,52 @@
                 <ul className="grid md:grid-cols-2 gap-3">
                   {entries.map(e => (
                     <li key={e.id} className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="text-lg font-semibold leading-tight">{e.word}</h3>
-                          <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{new Date(e.created_at).toLocaleString()}</div>
+                      {editingId === e.id ? (
+                        // 편집 모드
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <h3 className="text-lg font-semibold">수정: {e.word}</h3>
+                            <span className="inline-flex items-center rounded-full border border-amber-400 text-amber-700 dark:text-amber-300 px-2.5 py-1 text-xs bg-amber-50/80 dark:bg-amber-900/20">편집 중</span>
+                          </div>
+                          <div className="grid gap-3">
+                            <Field label="단어">
+                              <input value={edit.word} onChange={(ev)=>setEdit({ ...edit, word: ev.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400" />
+                            </Field>
+                            <Field label="뜻">
+                              <textarea rows={3} value={edit.meaning} onChange={(ev)=>setEdit({ ...edit, meaning: ev.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400" />
+                            </Field>
+                            <Field label="분류">
+                              <select value={edit.category} onChange={(ev)=>setEdit({ ...edit, category: ev.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400">
+                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                              </select>
+                            </Field>
+                            <Field label="만든방법">
+                              <input value={edit.method} onChange={(ev)=>setEdit({ ...edit, method: ev.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400" />
+                            </Field>
+                          </div>
+                          <div className="flex items-center gap-2 pt-1">
+                            <button onClick={saveEdit} disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold disabled:opacity-40">저장</button>
+                            <button onClick={cancelEdit} disabled={busy} className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700">취소</button>
+                          </div>
                         </div>
-                        <span className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-xs bg-white/70 dark:bg-slate-900/70">{e.category}</span>
-                      </div>
-                      <p className="mt-3 text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{e.meaning}</p>
-                      {e.method && (
-                        <div className="mt-2 text-xs text-slate-600 dark:text-slate-400">
-                          <span className="font-medium">만든방법:</span> {e.method}
+                      ) : (
+                        // 보기 모드
+                        <div>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <h3 className="text-lg font-semibold leading-tight">{e.word}</h3>
+                              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{new Date(e.created_at).toLocaleString()}</div>
+                            </div>
+                            <span className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-xs bg-white/70 dark:bg-slate-900/70">{e.category}</span>
+                          </div>
+                          <p className="mt-3 text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{e.meaning}</p>
+                          {e.method && (<div className="mt-2 text-xs text-slate-600 dark:text-slate-400"><span className="font-medium">만든방법:</span> {e.method}</div>)}
+                          <div className="mt-4 flex items-center gap-3">
+                            <button onClick={()=>beginEdit(e)} className="text-xs px-3 py-1.5 rounded-lg border border-sky-500 text-sky-600 dark:text-sky-400 hover:bg-sky-50/60 dark:hover:bg-sky-900/20">수정</button>
+                            <button onClick={()=>removeEntry(e.id)} className="text-xs px-3 py-1.5 rounded-lg border border-rose-400 text-rose-600 dark:text-rose-400 hover:bg-rose-50/60 dark:hover:bg-rose-900/20">삭제</button>
+                          </div>
                         </div>
                       )}
-                      <div className="mt-4 flex items-center gap-3">
-                        <button onClick={() => removeEntry(e.id)} disabled={busy} className="text-xs px-3 py-1.5 rounded-lg border border-rose-400 text-rose-600 dark:text-rose-400 hover:bg-rose-50/60 dark:hover:bg-rose-900/20 disabled:opacity-40">삭제</button>
-                      </div>
                     </li>
                   ))}
                 </ul>
@@ -244,7 +259,7 @@
 
             <footer className="mx-auto max-w-5xl px-4 py-10">
               <div className="rounded-3xl border border-slate-200 dark:border-slate-800 p-6 bg-white/70 dark:bg-slate-900/70 text-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-                <p>© {new Date().getFullYear()} 단어 등록·검색 (Supabase)</p>
+                <p>© {new Date().getFullYear()} 단어 등록·검색·수정 (Supabase)</p>
                 <div className="flex gap-4 text-slate-600 dark:text-slate-300">
                   <a className="hover:underline" href="#">개인정보처리방침</a>
                   <a className="hover:underline" href="#">이용약관</a>
@@ -267,5 +282,8 @@
       const root = ReactDOM.createRoot(document.getElementById('root'));
       root.render(<WordRegistry />);
     </script>
+  </body>
+</html>
+
   </body>
 </html>
