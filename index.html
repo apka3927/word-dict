@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>단어 사전 · 디자인 리뉴얼</title>
+  <title>단어 사전 · 파란 테마</title>
   <script>
     // Tailwind on CDN
     tailwind = {
@@ -12,8 +12,8 @@
         theme: {
           extend: {
             fontFamily: { sans: ["Inter", "Pretendard", "ui-sans-serif", "system-ui"] },
-            colors: { brand: { 500: '#10b981', 600: '#059669' } },
-            boxShadow: { soft: '0 10px 30px -12px rgba(0,0,0,.25)' }
+            colors: { brand: { 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' } },
+            boxShadow: { soft: '0 12px 30px -15px rgba(0,0,0,.35)' }
           }
         }
       }
@@ -28,27 +28,26 @@
     :root{ color-scheme: light dark }
     html,body{ height:100% }
     body{ font-family: Inter, Pretendard, ui-sans-serif, system-ui; }
-    /* Background */
-    .bg-grid {
-      background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,.08) 1px, transparent 0);
-      background-size: 22px 22px;
-    }
-    .dark .bg-grid { background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,.08) 1px, transparent 0) }
-    /* Inputs */
-    .input{ @apply w-full rounded-xl border border-slate-300/70 dark:border-slate-700/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500; }
-    .btn{ @apply inline-flex items-center justify-center gap-1 rounded-xl px-4 py-2 text-sm font-semibold shadow-soft transition active:translate-y-[1px]; }
-    .btn-primary{ @apply bg-brand-500 text-white hover:bg-brand-600; }
-    .btn-ghost{ @apply border border-slate-300/70 dark:border-slate-700/80 hover:bg-slate-50/60 dark:hover:bg-slate-800/60; }
-    .tag{ @apply text-xs px-2.5 py-1 rounded-full border border-slate-300/70 dark:border-slate-700/80 bg-white/60 dark:bg-slate-900/60; }
-    .card{ @apply rounded-2xl border border-slate-200/70 dark:border-slate-800/70 bg-white/70 dark:bg-slate-900/70 backdrop-blur shadow-soft; }
+    /* Subtle grid bg */
+    .bg-grid { background-image: radial-gradient(circle at 1px 1px, rgba(37,99,235,.12) 1px, transparent 0); background-size: 22px 22px; }
+    .dark .bg-grid { background-image: radial-gradient(circle at 1px 1px, rgba(96,165,250,.18) 1px, transparent 0) }
+    /* UI atoms */
+    .input{ @apply w-full rounded-xl border-2 border-slate-300/80 dark:border-slate-700/90 bg-white/80 dark:bg-slate-900/70 backdrop-blur px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-500/40; }
+    .btn{ @apply inline-flex items-center justify-center gap-1 rounded-xl px-4 py-2 text-sm font-semibold transition active:translate-y-[1px]; }
+    .btn-primary{ @apply bg-brand-600 text-white border-2 border-brand-700 hover:bg-brand-700; }
+    .btn-ghost{ @apply border-2 border-slate-300/80 dark:border-slate-700/90 hover:bg-slate-50/70 dark:hover:bg-slate-800/60; }
+    .tag{ @apply text-xs px-2.5 py-1 rounded-full border-2 border-slate-300/80 dark:border-slate-700/90 bg-white/70 dark:bg-slate-900/70; }
+    .card{ @apply rounded-2xl border-2 border-slate-200/80 dark:border-slate-800/90 bg-white/80 dark:bg-slate-900/70 backdrop-blur shadow-soft; }
+    .divider{ @apply h-[1px] bg-slate-200 dark:bg-slate-800 my-3; }
+    .link{ @apply text-brand-600 hover:underline; }
   </style>
 </head>
-<body class="min-h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 bg-grid text-slate-900 dark:text-slate-100">
+<body class="min-h-full bg-gradient-to-br from-slate-50 to-sky-50 dark:from-slate-950 dark:to-slate-900 bg-grid text-slate-900 dark:text-slate-100">
   <div class="mx-auto max-w-6xl px-4 py-6 space-y-6">
     <!-- Header -->
     <header class="card sticky top-4 z-10 px-5 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="h-9 w-9 grid place-items-center rounded-xl bg-brand-500 text-white shadow-soft">🔤</div>
+        <div class="h-9 w-9 grid place-items-center rounded-xl bg-brand-600 text-white border-2 border-brand-700">🔤</div>
         <div>
           <div class="text-lg font-semibold">단어 등록·검색·수정/삭제</div>
           <div class="text-xs text-slate-500 dark:text-slate-400">Supabase RPC 보호 · 비밀번호 필요</div>
@@ -139,7 +138,6 @@
 
     const state = { adminOK:false, adminPwd:'', q:'', cat:'전체', entries:[], loading:false };
     const $ = (s) => document.querySelector(s);
-    const $$ = (s) => document.querySelectorAll(s);
 
     // Theme
     const prefers = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -149,7 +147,7 @@
     // Toast helper
     function toast(msg, type='ok'){
       const t = document.createElement('div');
-      t.className = `rounded-xl px-3 py-2 text-sm shadow-soft ${type==='ok' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}`;
+      t.className = `rounded-xl px-3 py-2 text-sm shadow-soft border-2 ${type==='ok' ? 'bg-brand-600 text-white border-brand-700' : 'bg-rose-600 text-white border-rose-700'}`;
       t.textContent = msg; $('#toasts').appendChild(t); setTimeout(()=>{ t.remove(); }, 1800);
     }
 
@@ -197,12 +195,14 @@
           <div class="mt-3 text-sm whitespace-pre-wrap">${esc(e.meaning)}</div>
           ${e.method ? `<div class="mt-2 text-xs text-slate-500">만든방법: ${esc(e.method)}</div>` : ''}
 
-          <div class="mt-3 flex gap-2">
+          <div class="divider"></div>
+
+          <div class="mt-1 flex gap-2 justify-end">
             <button class="btn btn-ghost" data-edit="${e.id}">수정</button>
             <button class="btn btn-ghost" data-del="${e.id}">삭제</button>
           </div>
 
-          <div id="edit-${e.id}" class="hidden mt-3 grid gap-2">
+          <div id="edit-${e.id}" class="hidden mt-4 grid gap-2">
             <div class="grid md:grid-cols-2 gap-2">
               <input id="ew-${e.id}" class="input" value="${escAttr(e.word)}" />
               <select id="ec-${e.id}" class="input">
@@ -211,7 +211,7 @@
             </div>
             <textarea id="em-${e.id}" rows="3" class="input">${esc(e.meaning)}</textarea>
             <input id="ed-${e.id}" class="input" value="${escAttr(e.method||'')}" placeholder="만든방법" />
-            <div class="flex gap-2">
+            <div class="flex gap-2 justify-end">
               <button class="btn btn-primary" data-save="${e.id}">저장</button>
               <button class="btn btn-ghost" data-cancel="${e.id}">취소</button>
             </div>
@@ -226,7 +226,9 @@
       if(!id) return; if(t.hasAttribute('data-edit')) return openEdit(id); if(t.hasAttribute('data-cancel')) return closeEdit(id);
       if(t.hasAttribute('data-save')) return saveEdit(id); if(t.hasAttribute('data-del')) return removeEntry(id);
     }
-    $('#list').addEventListener('click', listClick);
+    document.addEventListener('click', (ev)=>{
+      if(ev.target.closest('#list')) listClick(ev);
+    });
 
     function openEdit(id){ if(!state.adminOK){ toast('먼저 관리자 인증을 해주세요','err'); return; } $('#edit-'+id).classList.remove('hidden'); }
     function closeEdit(id){ $('#edit-'+id).classList.add('hidden'); }
