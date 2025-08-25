@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ko" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>단어 사전 — 등록 & 검색</title>
+
+    <!-- Tailwind CDN (dark mode: class) -->
+    <script>tailwind = { config: { darkMode: 'class' } };</script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- React 18 UMD + ReactDOM + Babel(브라우저 JSX 변환) -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body class="h-full">
+    <div id="root"></div>
+
+    <!-- 앱 코드: 순수 JS(타입 없음) -->
+    <script type="text/babel">
+      const { useEffect, useMemo, useState } = React;
+      const CATEGORIES = ["있는말", "있던말", "만든말"];
+
+      function WordRegistry() {
+        // 다크 모드
+        const [dark, setDark] = useState(() => {
+          const saved = localStorage.getItem('dict.dark');
+          if (saved === null) {
+            return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          }
+          return saved === '1';
+        });
+        useEffect(() => {
+          document.documentElement.classList.toggle('dark', dark);
+          localStorage.setItem('dict.dark', dark ? '1' : '0');
+        }, [dark]);
+
+        // 데이터
+        const [entries, setEntries] = useState(() => {
+          try { return JSON.parse(localStorage.getItem('dict.entries.v1') || '[]'); } catch { return []; }
+        });
+        useEffect(() => {
+          localStorage.setItem('dict.entries.v1', JSON.stringify(entries));
+        }, [entries]);
+
+        // 폼
+        const [form, setForm] = useState({ word: '', meaning: '', category: CATEGORIES[0], method: '' });
+
+        // 검색
+        const [q, setQ] = useState('');
+        const [cat, setCat] = useState('전체'); // 전체 or 카테고리
+
+        const filtered = useMemo(() => {
+          const term = q.trim().toLowerCase();
+          return entries
+            .filter(e => (cat === '전체' ? true : e.category === cat))
+            .filter(e => {
+              if (!term) return true;
+              const hay = (e.word + '\n' + e.meaning + '\n' + e.method).toLowerCase();
+              return hay.includes(term);
+            })
+            .sort((a,b) => b.ts - a.ts);
+        }, [entries, q, cat]);
+
+        function addEntry() {
+          const word = form.word.trim();
+          const meaning = form.meaning.trim();
+          const method = form.method.trim();
+          const category = form.category;
+
+          if (!word || !meaning) return alert('단어와 뜻은 필수입니다.');
+          if (!CATEGORIES.includes(category)) return alert('분류 선택이 올바르지 않습니다.');
+
+          const dup = entries.some(e => e.word === word);
+          if (dup && !confirm('같은 단어가 이미 있습니다. 그래도 추가할까요?')) return;
+
+          const id = (crypto?.randomUUID?.() || String(Date.now() + Math.random()));
+          setEntries(prev => [{ id, word, meaning, category, method, ts: Date.now() }, ...prev]);
+          setForm({ word: '', meaning: '', category: form.category, method: '' });
+        }
+
+        function removeEntry(id) {
+          if (!confirm('정말 삭제할까요?')) return;
+          setEntries(prev => prev.filter(e => e.id !== id));
+        }
+
+        function onSubmit(e) {
+          e.preventDefault();
+          addEntry();
+        }
+
+        return (
+          <div className="min-h-screen bg-gradient-to-b from-white to-slate-50 text-slate-900 dark:from-slate-950 dark:to-slate-900 dark:text-slate-100">
+            {/* 헤더 */}
+            <header className="sticky top-0 z-10 backdrop-blur bg-white/60 dark:bg-slate-900/60 border-b border-slate-200/60 dark:border-slate-800/60">
+              <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-2xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 grid place-items-center font-bold">📚</div>
+                  <div>
+                    <h1 className="text-lg font-semibold">단어 등록·검색</h1>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">단어/뜻/분류/만든방법 — 로컬 저장</p>
+                  </div>
+                </div>
+                <button onClick={() => setDark(d => !d)} className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="다크모드">
+                  {dark ? '🌙 다크' : '☀️ 라이트'}
+                </button>
+              </div>
+            </header>
+
+            <main className="mx-auto max-w-5xl px-4 py-8 grid lg:grid-cols-3 gap-6">
+              {/* 입력 폼 */}
+              <section className="lg:col-span-1 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-5">
+                <h2 className="font-semibold">단어 등록</h2>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">입력 후 "추가"를 누르세요.</p>
+
+                <form onSubmit={onSubmit} className="mt-4 grid gap-3">
+                  <Field label="단어">
+                    <input
+                      value={form.word}
+                      onChange={(e) => setForm({ ...form, word: e.target.value })}
+                      placeholder="예: 사과"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+                      required
+                    />
+                  </Field>
+                  <Field label="뜻">
+                    <textarea
+                      rows={3}
+                      value={form.meaning}
+                      onChange={(e) => setForm({ ...form, meaning: e.target.value })}
+                      placeholder="예: 장미과 사과나무의 열매."
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+                      required
+                    />
+                  </Field>
+                  <Field label="분류">
+                    <select
+                      value={form.category}
+                      onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+                    >
+                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="만든방법">
+                    <input
+                      value={form.method}
+                      onChange={(e) => setForm({ ...form, method: e.target.value })}
+                      placeholder="예: 합성(사+과), 차용, 축약 등"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+                    />
+                  </Field>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <button type="submit" className="px-4 py-2 rounded-xl bg-emerald-500 text-white font-semibold hover:opacity-90">추가</button>
+                    <button type="button" onClick={() => setForm({ word: '', meaning: '', category: form.category, method: '' })} className="px-3 py-2 rounded-xl border border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20">초기화</button>
+                  </div>
+                </form>
+              </section>
+
+              {/* 검색/리스트 */}
+              <section className="lg:col-span-2 space-y-4">
+                <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-5">
+                  <h2 className="font-semibold">검색</h2>
+                  <div className="mt-3 grid md:grid-cols-3 gap-3">
+                    <input
+                      value={q}
+                      onChange={(e) => setQ(e.target.value)}
+                      placeholder="단어/뜻/만든방법 검색..."
+                      className="md:col-span-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+                    />
+                    <select
+                      value={cat}
+                      onChange={(e) => setCat(e.target.value)}
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+                    >
+                      <option value="전체">전체</option>
+                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="mt-2 text-xs text-slate-600 dark:text-slate-400">총 {entries.length}개 중 검색 결과 {filtered.length}개</div>
+                </div>
+
+                <ul className="grid md:grid-cols-2 gap-3">
+                  {filtered.map(e => (
+                    <li key={e.id} className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="text-lg font-semibold leading-tight">{e.word}</h3>
+                          <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{new Date(e.ts).toLocaleString()}</div>
+                        </div>
+                        <span className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-xs bg-white/70 dark:bg-slate-900/70">{e.category}</span>
+                      </div>
+                      <p className="mt-3 text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{e.meaning}</p>
+                      {e.method && (
+                        <div className="mt-2 text-xs text-slate-600 dark:text-slate-400">
+                          <span className="font-medium">만든방법:</span> {e.method}
+                        </div>
+                      )}
+                      <div className="mt-4 flex items-center gap-3">
+                        <button onClick={() => removeEntry(e.id)} className="text-xs px-3 py-1.5 rounded-lg border border-rose-400 text-rose-600 dark:text-rose-400 hover:bg-rose-50/60 dark:hover:bg-rose-900/20">삭제</button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+
+                {filtered.length === 0 && (
+                  <div className="rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                    아직 항목이 없거나 검색 결과가 없습니다. 왼쪽 폼에서 새로 추가해 보세요.
+                  </div>
+                )}
+              </section>
+            </main>
+
+            <footer className="mx-auto max-w-5xl px-4 py-10">
+              <div className="rounded-3xl border border-slate-200 dark:border-slate-800 p-6 bg-white/70 dark:bg-slate-900/70 text-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                <p>© {new Date().getFullYear()} 단어 등록·검색</p>
+                <div className="flex gap-4 text-slate-600 dark:text-slate-300">
+                  <a className="hover:underline" href="#">개인정보처리방침</a>
+                  <a className="hover:underline" href="#">이용약관</a>
+                </div>
+              </div>
+            </footer>
+          </div>
+        );
+      }
+
+      function Field({ label, children }) {
+        return (
+          <label className="grid gap-1">
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{label}</span>
+            {children}
+          </label>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<WordRegistry />);
+    </script>
+  </body>
+</html>
