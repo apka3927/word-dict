@@ -3,283 +3,219 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>단어 사전 — 등록·검색·수정 (Supabase)</title>
-
-    <!-- Tailwind (dark mode: class) -->
+    <title>단어 사전 — 삭제/수정 핫픽스</title>
     <script>tailwind = { config: { darkMode: 'class' } };</script>
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- React 18, ReactDOM 18, Babel (JSX 변환) -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <!-- Supabase JS v2 UMD -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body class="h-full">
     <div id="root"></div>
 
     <script type="text/babel">
-      const { useEffect, useMemo, useState } = React;
+      const { useEffect, useState } = React;
       const CATEGORIES = ["있는말", "있던말", "만든말"];
 
-      // ✅ 사용자 제공 값으로 채움 (따옴표 유지)
+      // 사용자 프로젝트 연결값 (동일)
       const SUPABASE_URL = "https://fbyilsyeygaucdbaexut.supabase.co";
       const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZieWlsc3lleWdhdWNkYmFleHV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwOTkyNDEsImV4cCI6MjA3MTY3NTI0MX0.2c-_df6s-3cxa1YkxsqD04Hql_5OXKeTPhidz7jNvQQ";
-
       const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      function WordRegistry() {
-        // theme
-        const [dark, setDark] = useState(() => {
-          const saved = localStorage.getItem('dict.dark');
-          if (saved === null) return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-          return saved === '1';
-        });
-        useEffect(() => {
-          document.documentElement.classList.toggle('dark', dark);
-          localStorage.setItem('dict.dark', dark ? '1' : '0');
-        }, [dark]);
+      function App(){
+        const [dark, setDark] = useState(() => matchMedia('(prefers-color-scheme: dark)').matches);
+        useEffect(()=>{ document.documentElement.classList.toggle('dark', dark); }, [dark]);
 
-        // state
         const [entries, setEntries] = useState([]);
         const [loading, setLoading] = useState(true);
-        const [busy, setBusy] = useState(false); // 전역 작업 중
-        const [err, setErr] = useState("");
-
-        const [form, setForm] = useState({ word: '', meaning: '', category: CATEGORIES[0], method: '' });
         const [q, setQ] = useState('');
         const [cat, setCat] = useState('전체');
+        const [err, setErr] = useState('');
+        const [busy, setBusy] = useState(false);
 
-        // editing state
+        // 등록 폼
+        const [form, setForm] = useState({word:'', meaning:'', category:CATEGORIES[0], method:''});
+
+        // 편집 상태
         const [editingId, setEditingId] = useState(null);
-        const [edit, setEdit] = useState({ word: '', meaning: '', category: CATEGORIES[0], method: '' });
+        const [edit, setEdit] = useState({word:'', meaning:'', category:CATEGORIES[0], method:''});
 
-        // load list
-        async function load() {
-          setLoading(true); setErr("");
-          try {
+        // 🔐 관리자 비번 보관 + 잠금 상태
+        const [adminPwd, setAdminPwd] = useState('');
+        const [adminOK, setAdminOK] = useState(false);
+        const [showPwd, setShowPwd] = useState(false);
+
+        async function load(){
+          setLoading(true); setErr('');
+          try{
             const term = q.trim();
-            let query = db.from('entries').select('*').order('created_at', { ascending: false });
-            if (cat !== '전체') query = query.eq('category', cat);
-            if (term) query = query.or(`word.ilike.%${term}%,meaning.ilike.%${term}%,method.ilike.%${term}%`);
+            let query = db.from('entries').select('*').order('created_at',{ascending:false});
+            if(cat!=='전체') query = query.eq('category', cat);
+            if(term) query = query.or(`word.ilike.%${term}%,meaning.ilike.%${term}%,method.ilike.%${term}%`);
             const { data, error } = await query;
-            if (error) throw error;
-            setEntries(data || []);
-          } catch (e) {
-            console.error(e); setErr(e.message || String(e));
-          } finally { setLoading(false); }
+            if(error) throw error; setEntries(data||[]);
+          }catch(e){ setErr(e.message||String(e)); }
+          finally{ setLoading(false); }
         }
-        useEffect(() => { load(); }, []);
-        useEffect(() => { const id = setTimeout(load, 250); return () => clearTimeout(id); }, [q, cat]);
+        useEffect(()=>{ load(); },[]);
+        useEffect(()=>{ const t=setTimeout(load,250); return ()=>clearTimeout(t); },[q,cat]);
 
-        // create
-        async function addEntry() {
-          const word = form.word.trim();
-          const meaning = form.meaning.trim();
-          const method = form.method.trim();
-          const category = form.category;
-          if (!word || !meaning) return alert('단어와 뜻은 필수입니다.');
-          if (!CATEGORIES.includes(category)) return alert('분류 선택이 올바르지 않습니다.');
-          setBusy(true); setErr("");
-          try {
-            const { error } = await db.from('entries').insert([{ word, meaning, category, method }]);
-            if (error) throw error;
-            setForm({ word: '', meaning: '', category, method: '' });
-            await load();
-          } catch (e) { console.error(e); alert('저장 오류: ' + (e.message || e)); }
-          finally { setBusy(false); }
+        async function addEntry(){
+          const {word, meaning, category, method} = form;
+          if(!word.trim()||!meaning.trim()) return alert('단어/뜻 필수');
+          setBusy(true);
+          try{
+            const { error } = await db.from('entries').insert([{word:word.trim(), meaning:meaning.trim(), category, method:(method||'').trim()}]);
+            if(error) throw error; setForm({word:'', meaning:'', category, method:''}); await load();
+          }catch(e){ alert('저장 오류: '+(e.message||e)); }
+          finally{ setBusy(false); }
         }
 
-        // delete
-        async function removeEntry(id) {
-          if (!confirm('정말 삭제할까요?')) return;
-          setBusy(true); setErr("");
-          try {
-            const { error } = await db.from('entries').delete().eq('id', id);
-            if (error) throw error;
-            await load();
-          } catch (e) { console.error(e); alert('삭제 오류: ' + (e.message || e)); }
-          finally { setBusy(false); }
+        // 🔐 비번 확인 → 서버 함수(can_edit)로 실제 검증
+        async function verifyPwd(){
+          if(!adminPwd) { alert('비밀번호를 입력하세요'); return; }
+          setBusy(true);
+          try{
+            const { data, error } = await db.rpc('can_edit', { pwd: adminPwd });
+            console.log('[RPC can_edit] data:', data, 'error:', error);
+            if(error) throw error;
+            if(!data) { setAdminOK(false); alert('비밀번호가 틀렸습니다.'); return; }
+            setAdminOK(true);
+            alert('관리자 모드 활성화');
+          }catch(e){ alert('검증 오류: '+(e.message||e)); }
+          finally{ setBusy(false); }
         }
 
-        // edit begin/cancel
-        function beginEdit(e) {
-          setEditingId(e.id);
-          setEdit({ word: e.word, meaning: e.meaning, category: e.category, method: e.method || '' });
-        }
-        function cancelEdit() { setEditingId(null); }
+        function requireAdmin(){ if(!adminOK){ alert('먼저 비밀번호로 관리자 모드를 켜세요.'); return false; } return true; }
 
-        // update
-        async function saveEdit() {
-          const word = edit.word.trim();
-          const meaning = edit.meaning.trim();
-          const method = edit.method.trim();
-          const category = edit.category;
-          if (!word || !meaning) return alert('단어와 뜻은 필수입니다.');
-          if (!CATEGORIES.includes(category)) return alert('분류 선택이 올바르지 않습니다.');
-          setBusy(true); setErr("");
-          try {
-            const { error } = await db.from('entries')
-              .update({ word, meaning, category, method })
-              .eq('id', editingId);
-            if (error) throw error;
-            setEditingId(null);
-            await load();
-          } catch (e) {
-            console.error(e);
-            alert('수정 오류: ' + (e.message || e) + '\n⚠️ UPDATE 정책이 없으면 아래 SQL을 실행하세요:\ncreate policy "public update" on public.entries for update using (true) with check (true);');
-          } finally { setBusy(false); }
+        function beginEdit(e){ if(!requireAdmin()) return; setEditingId(e.id); setEdit({word:e.word, meaning:e.meaning, category:e.category, method:e.method||''}); }
+        function cancelEdit(){ setEditingId(null); }
+
+        async function saveEdit(){
+          if(!requireAdmin()) return;
+          const {word, meaning, category, method} = edit;
+          if(!word.trim()||!meaning.trim()) return alert('단어/뜻 필수');
+          setBusy(true);
+          try{
+            // ✅ 일반 update() 금지. 반드시 RPC만 사용.
+            const payload = { p_id: editingId, p_word: word.trim(), p_meaning: meaning.trim(), p_category: category, p_method: (method||'').trim(), p_pwd: adminPwd };
+            console.log('[RPC entry_update_admin] args:', payload);
+            const { data, error } = await db.rpc('entry_update_admin', payload);
+            console.log('[RPC entry_update_admin] data:', data, 'error:', error);
+            if(error) throw error;
+            setEditingId(null); await load(); alert('수정 완료');
+          }catch(e){ console.error(e); alert('수정 오류: '+(e.message||e)); }
+          finally{ setBusy(false); }
         }
 
-        function onSubmit(e) { e.preventDefault(); addEntry(); }
+        async function removeEntry(id){
+          if(!requireAdmin()) return;
+          if(!confirm('정말 삭제할까요?')) return;
+          setBusy(true);
+          try{
+            const payload = { p_id: id, p_pwd: adminPwd };
+            console.log('[RPC entry_delete_admin] args:', payload);
+            const { data, error } = await db.rpc('entry_delete_admin', payload);
+            console.log('[RPC entry_delete_admin] data:', data, 'error:', error);
+            if(error) throw error;
+            await load(); alert('삭제 완료');
+          }catch(e){ console.error(e); alert('삭제 오류: '+(e.message||e)); }
+          finally{ setBusy(false); }
+        }
 
         return (
-          <div className="min-h-screen bg-gradient-to-b from-white to-slate-50 text-slate-900 dark:from-slate-950 dark:to-slate-900 dark:text-slate-100">
-            {/* header */}
-            <header className="sticky top-0 z-10 backdrop-blur bg-white/60 dark:bg-slate-900/60 border-b border-slate-200/60 dark:border-slate-800/60">
+          <div className="min-h-screen bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+            <header className="sticky top-0 z-10 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/70 backdrop-blur">
               <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-2xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 grid place-items-center font-bold">📚</div>
-                  <div>
-                    <h1 className="text-lg font-semibold">단어 등록·검색·수정</h1>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Supabase(Postgres) 원격 저장</p>
+                <div className="font-semibold">단어 등록·검색·수정 — 핫픽스</div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 border rounded-xl px-2 py-1">
+                    <input type={showPwd? 'text':'password'} className="outline-none bg-transparent text-sm" placeholder="관리자 비밀번호" value={adminPwd} onChange={e=>setAdminPwd(e.target.value)} />
+                    <button className="text-xs" onClick={()=>setShowPwd(s=>!s)}>{showPwd?'숨김':'표시'}</button>
+                    <button className="px-2 py-1 rounded bg-emerald-600 text-white text-xs" onClick={verifyPwd} disabled={busy}>확인</button>
                   </div>
+                  <span className={`text-xs px-2 py-1 rounded ${adminOK? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300':'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{adminOK? '🔓 관리자 모드':'🔒 잠금 중'}</span>
+                  <button className="px-3 py-1.5 rounded border text-sm" onClick={()=>setDark(d=>!d)}>{dark?'🌙':'☀️'}</button>
                 </div>
-                <button onClick={() => setDark(d => !d)} className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="다크모드">
-                  {dark ? '🌙 다크' : '☀️ 라이트'}
-                </button>
               </div>
             </header>
 
-            <main className="mx-auto max-w-5xl px-4 py-8 grid lg:grid-cols-3 gap-6">
-              {/* form */}
-              <section className="lg:col-span-1 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-5">
+            <main className="mx-auto max-w-5xl px-4 py-6 grid lg:grid-cols-3 gap-6">
+              <section className="lg:col-span-1 p-5 rounded-2xl border dark:border-slate-800">
                 <h2 className="font-semibold">단어 등록</h2>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">입력 후 "추가"를 누르세요.</p>
-
-                <form onSubmit={onSubmit} className="mt-4 grid gap-3">
-                  <Field label="단어">
-                    <input value={form.word} onChange={(e)=>setForm({ ...form, word: e.target.value })} placeholder="예: 빗모질다" className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400" required />
-                  </Field>
-                  <Field label="뜻">
-                    <textarea rows={3} value={form.meaning} onChange={(e)=>setForm({ ...form, meaning: e.target.value })} placeholder="예: 횡포(橫暴)하다" className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400" required />
-                  </Field>
-                  <Field label="분류">
-                    <select value={form.category} onChange={(e)=>setForm({ ...form, category: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400">
-                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </Field>
-                  <Field label="만든방법">
-                    <input value={form.method} onChange={(e)=>setForm({ ...form, method: e.target.value })} placeholder="예: pisk-(橫) + mwǒtil-(暴) 직역" className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400" />
-                  </Field>
-                  <div className="flex items-center gap-2 pt-1">
-                    <button type="submit" disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-500 text-white font-semibold hover:opacity-90 disabled:opacity-40">추가</button>
-                    <button type="button" onClick={()=>setForm({ word:'', meaning:'', category: form.category, method:'' })} className="px-3 py-2 rounded-xl border border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20">초기화</button>
+                <div className="mt-3 grid gap-3">
+                  <Field label="단어"><input value={form.word} onChange={e=>setForm({...form, word:e.target.value})} className="input" placeholder="예: 빗모질다"/></Field>
+                  <Field label="뜻"><textarea rows=3 value={form.meaning} onChange={e=>setForm({...form, meaning:e.target.value})} className="input" placeholder="예: 횡포(橫暴)하다"/></Field>
+                  <Field label="분류"><select value={form.category} onChange={e=>setForm({...form, category:e.target.value})} className="input">{CATEGORIES.map(c=> <option key={c} value={c}>{c}</option>)}</select></Field>
+                  <Field label="만든방법"><input value={form.method} onChange={e=>setForm({...form, method:e.target.value})} className="input" placeholder="예: pisk-(橫) + mwǒtil-(暴) 직역"/></Field>
+                  <div className="flex gap-2">
+                    <button className="btn" disabled={busy} onClick={addEntry}>추가</button>
+                    <button className="btn-outline" onClick={()=>setForm({word:'', meaning:'', category:form.category, method:''})}>초기화</button>
                   </div>
-                </form>
+                </div>
+                {err && <p className="mt-3 text-xs text-rose-600">오류: {err}</p>}
               </section>
 
-              {/* search & list */}
               <section className="lg:col-span-2 space-y-4">
-                <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-5">
+                <div className="p-5 rounded-2xl border dark:border-slate-800">
                   <h2 className="font-semibold">검색</h2>
                   <div className="mt-3 grid md:grid-cols-3 gap-3">
-                    <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="단어/뜻/만든방법 검색..." className="md:col-span-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400" />
-                    <select value={cat} onChange={(e)=>setCat(e.target.value)} className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400">
+                    <input className="input md:col-span-2" placeholder="단어/뜻/만든방법 검색" value={q} onChange={e=>setQ(e.target.value)} />
+                    <select className="input" value={cat} onChange={e=>setCat(e.target.value)}>
                       <option value="전체">전체</option>
-                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      {CATEGORIES.map(c=> <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
-                  <div className="mt-2 text-xs text-slate-600 dark:text-slate-400">{loading ? '불러오는 중…' : `총 ${entries.length}개 결과`}{err ? ` — 오류: ${err}` : ''}</div>
+                  <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">{loading? '불러오는 중…' : `총 ${entries.length}개 결과`}</div>
                 </div>
 
                 <ul className="grid md:grid-cols-2 gap-3">
-                  {entries.map(e => (
-                    <li key={e.id} className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-5">
-                      {editingId === e.id ? (
-                        // 편집 모드
+                  {entries.map(e=> (
+                    <li key={e.id} className="p-5 rounded-2xl border dark:border-slate-800">
+                      {editingId===e.id ? (
                         <div className="space-y-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <h3 className="text-lg font-semibold">수정: {e.word}</h3>
-                            <span className="inline-flex items-center rounded-full border border-amber-400 text-amber-700 dark:text-amber-300 px-2.5 py-1 text-xs bg-amber-50/80 dark:bg-amber-900/20">편집 중</span>
-                          </div>
-                          <div className="grid gap-3">
-                            <Field label="단어">
-                              <input value={edit.word} onChange={(ev)=>setEdit({ ...edit, word: ev.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400" />
-                            </Field>
-                            <Field label="뜻">
-                              <textarea rows={3} value={edit.meaning} onChange={(ev)=>setEdit({ ...edit, meaning: ev.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400" />
-                            </Field>
-                            <Field label="분류">
-                              <select value={edit.category} onChange={(ev)=>setEdit({ ...edit, category: ev.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400">
-                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                              </select>
-                            </Field>
-                            <Field label="만든방법">
-                              <input value={edit.method} onChange={(ev)=>setEdit({ ...edit, method: ev.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400" />
-                            </Field>
-                          </div>
-                          <div className="flex items-center gap-2 pt-1">
-                            <button onClick={saveEdit} disabled={busy} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold disabled:opacity-40">저장</button>
-                            <button onClick={cancelEdit} disabled={busy} className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700">취소</button>
+                          <div className="flex items-center justify-between"><h3 className="font-semibold">수정: {e.word}</h3><span className="text-xs">{new Date(e.created_at).toLocaleString()}</span></div>
+                          <Field label="단어"><input className="input" value={edit.word} onChange={ev=>setEdit({...edit, word:ev.target.value})}/></Field>
+                          <Field label="뜻"><textarea rows=3 className="input" value={edit.meaning} onChange={ev=>setEdit({...edit, meaning:ev.target.value})}/></Field>
+                          <Field label="분류"><select className="input" value={edit.category} onChange={ev=>setEdit({...edit, category:ev.target.value})}>{CATEGORIES.map(c=> <option key={c} value={c}>{c}</option>)}</select></Field>
+                          <Field label="만든방법"><input className="input" value={edit.method} onChange={ev=>setEdit({...edit, method:ev.target.value})}/></Field>
+                          <div className="flex gap-2">
+                            <button className="btn" disabled={busy} onClick={saveEdit}>저장</button>
+                            <button className="btn-outline" onClick={cancelEdit}>취소</button>
                           </div>
                         </div>
                       ) : (
-                        // 보기 모드
                         <div>
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <h3 className="text-lg font-semibold leading-tight">{e.word}</h3>
-                              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{new Date(e.created_at).toLocaleString()}</div>
-                            </div>
-                            <span className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-xs bg-white/70 dark:bg-slate-900/70">{e.category}</span>
-                          </div>
-                          <p className="mt-3 text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{e.meaning}</p>
-                          {e.method && (<div className="mt-2 text-xs text-slate-600 dark:text-slate-400"><span className="font-medium">만든방법:</span> {e.method}</div>)}
-                          <div className="mt-4 flex items-center gap-3">
-                            <button onClick={()=>beginEdit(e)} className="text-xs px-3 py-1.5 rounded-lg border border-sky-500 text-sky-600 dark:text-sky-400 hover:bg-sky-50/60 dark:hover:bg-sky-900/20">수정</button>
-                            <button onClick={()=>removeEntry(e.id)} className="text-xs px-3 py-1.5 rounded-lg border border-rose-400 text-rose-600 dark:text-rose-400 hover:bg-rose-50/60 dark:hover:bg-rose-900/20">삭제</button>
+                          <div className="flex items-center justify-between"><h3 className="font-semibold">{e.word}</h3><span className="text-xs">{new Date(e.created_at).toLocaleString()}</span></div>
+                          <div className="mt-2 text-sm whitespace-pre-wrap">{e.meaning}</div>
+                          {e.method && <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">만든방법: {e.method}</div>}
+                          <div className="flex gap-2 mt-3">
+                            <button className="btn-outline" onClick={()=>beginEdit(e)}>수정</button>
+                            <button className="btn-outline" onClick={()=>removeEntry(e.id)}>삭제</button>
                           </div>
                         </div>
                       )}
                     </li>
                   ))}
                 </ul>
-
-                {!loading && entries.length === 0 && (
-                  <div className="rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-sm text-slate-500 dark:text-slate-400">
-                    아직 항목이 없거나 검색 결과가 없습니다. 왼쪽 폼에서 새로 추가해 보세요.
-                  </div>
-                )}
               </section>
             </main>
 
-            <footer className="mx-auto max-w-5xl px-4 py-10">
-              <div className="rounded-3xl border border-slate-200 dark:border-slate-800 p-6 bg-white/70 dark:bg-slate-900/70 text-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-                <p>© {new Date().getFullYear()} 단어 등록·검색·수정 (Supabase)</p>
-                <div className="flex gap-4 text-slate-600 dark:text-slate-300">
-                  <a className="hover:underline" href="#">개인정보처리방침</a>
-                  <a className="hover:underline" href="#">이용약관</a>
-                </div>
-              </div>
-            </footer>
+            <style>{`
+              .input{ @apply w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-400; }
+              .btn{ @apply px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:opacity-90; }
+              .btn-outline{ @apply px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-sm hover:bg-slate-50 dark:hover:bg-slate-800; }
+            `}</style>
           </div>
         );
       }
 
-      function Field({ label, children }) {
-        return (
-          <label className="grid gap-1">
-            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{label}</span>
-            {children}
-          </label>
-        );
-      }
+      const Field = ({label, children}) => (
+        <label className="grid gap-1"><span className="text-xs text-slate-600 dark:text-slate-300">{label}</span>{children}</label>
+      );
 
-      const root = ReactDOM.createRoot(document.getElementById('root'));
-      root.render(<WordRegistry />);
+      ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
     </script>
   </body>
 </html>
