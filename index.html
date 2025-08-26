@@ -67,6 +67,7 @@
             <button id="btnClear" class="inline-flex items-center justify-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold border-2 border-slate-600/70 bg-slate-900/70 hover:bg-slate-800/70">초기화</button>
           </div>
           <p id="sysAdd" class="text-xs text-rose-400"></p>
+          <p class="text-xs text-slate-300">낱말을 올리기에 앞서 <a href="https://arca.live/b/peregrini" target="_blank" rel="noopener noreferrer" class="underline text-brand-600 hover:text-brand-700">우리말 채널(arca.live/b/peregrini)</a>에 올려 이야기를 나눠봅시다.</p>
         </div>
       </section>
 
@@ -85,6 +86,11 @@
         <div class="mt-2 text-xs text-slate-400 flex items-center gap-2">
           <span id="count">–</span>
           <button id="btnReload" class="inline-flex items-center justify-center gap-1 rounded-lg px-2 py-1 text-sm font-semibold border-2 border-slate-600/70 bg-slate-900/70 hover:bg-slate-800/70">새로고침</button>
+          <div class="ml-auto flex items-center gap-2">
+            <button id="prevPage" class="inline-flex items-center justify-center gap-1 rounded-lg px-3 py-1 text-sm font-semibold border-2 border-slate-600/70 bg-slate-900/70 hover:bg-slate-800/70 disabled:opacity-40 disabled:cursor-not-allowed">이전</button>
+            <span id="pageInfo">1 / 1</span>
+            <button id="nextPage" class="inline-flex items-center justify-center gap-1 rounded-lg px-3 py-1 text-sm font-semibold border-2 border-slate-600/70 bg-slate-900/70 hover:bg-slate-800/70 disabled:opacity-40 disabled:cursor-not-allowed">다음</button>
+          </div>
         </div>
 
         <ul id="list" class="mt-4 grid md:grid-cols-2 gap-4"></ul>
@@ -114,7 +120,7 @@
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZieWlsc3lleWdhdWNkYmFleHV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwOTkyNDEsImV4cCI6MjA3MTY3NTI0MX0.2c-_df6s-3cxa1YkxsqD04Hql_5OXKeTPhidz7jNvQQ";
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const state = { adminOK:false, adminPwd:'', q:'', cat:'전체', entries:[] };
+    const state = { adminOK:false, adminPwd:'', q:'', cat:'전체', page:1, limit:50, total:0, pages:1, entries:[] };
     const $ = (s)=>document.querySelector(s);
 
     // 공통 클래스(카드/배지)
@@ -138,12 +144,28 @@
     }
 
     async function load(){
-      state.q=$('#q').value.trim(); state.cat=$('#filterCat').value; $('#count').textContent='불러오는 중…';
-      let query=db.from('entries').select('*').order('created_at',{ascending:false});
-      if(state.cat!=='전체') query=query.eq('category', state.cat);
-      if(state.q) query=query.or(`word.ilike.%${state.q}%,meaning.ilike.%${state.q}%,method.ilike.%${state.q}%`);
-      const { data, error } = await query; if(error){ $('#count').textContent='오류'; toast(error.message,'err'); return; }
-      state.entries=data||[]; $('#count').textContent=`총 ${state.entries.length}개 결과`; renderList();
+      state.q = $('#q').value.trim();
+      state.cat = $('#filterCat').value;
+      $('#count').textContent='불러오는 중…';
+      const from = (state.page-1) * state.limit;
+      const to = from + state.limit - 1;
+      let query = db.from('entries')
+        .select('*', { count: 'exact' })
+        .order('created_at',{ascending:false})
+        .range(from, to);
+      if(state.cat!=='전체') query = query.eq('category', state.cat);
+      if(state.q) query = query.or(`word.ilike.%${state.q}%,meaning.ilike.%${state.q}%,method.ilike.%${state.q}%`);
+      const { data, count, error } = await query;
+      if(error){ $('#count').textContent='오류'; toast(error.message,'err'); return; }
+      state.entries = data||[];
+      state.total = count ?? state.entries.length;
+      state.pages = Math.max(1, Math.ceil((state.total||0)/state.limit));
+      $('#count').textContent = `총 ${state.total}개 중 ${state.page}/${state.pages}페이지`;
+      const pageInfo = $('#pageInfo'); if(pageInfo) pageInfo.textContent = `${state.page} / ${state.pages}`;
+      const prev = $('#prevPage'), next = $('#nextPage');
+      if(prev) prev.disabled = state.page<=1;
+      if(next) next.disabled = state.page>=state.pages;
+      renderList();
     }
 
     function esc(s=''){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[m])); }
@@ -201,8 +223,10 @@
 
     async function addEntry(){ const word=$('#newWord').value.trim(); const meaning=$('#newMeaning').value.trim(); const category=$('#newCat').value; const method=$('#newMethod').value.trim(); if(!word||!meaning){ $('#sysAdd').textContent='단어/뜻은 필수입니다.'; return; } const { error }=await db.from('entries').insert([{ word,meaning,category,method }]); if(error){ $('#sysAdd').textContent='추가 오류: '+error.message; return; } $('#sysAdd').textContent=''; $('#newWord').value=''; $('#newMeaning').value=''; $('#newMethod').value=''; toast('추가 완료'); load(); }
 
-    $('#btnAdd').addEventListener('click', addEntry); $('#btnClear').addEventListener('click', ()=>{ $('#newWord').value=''; $('#newMeaning').value=''; $('#newMethod').value=''; }); $('#btnReload').addEventListener('click', load); $('#q').addEventListener('input', ()=>{ clearTimeout(window._q); window._q=setTimeout(load,250); }); $('#filterCat').addEventListener('change', load);
+    $('#btnAdd').addEventListener('click', addEntry); $('#btnClear').addEventListener('click', ()=>{ $('#newWord').value=''; $('#newMeaning').value=''; $('#newMethod').value=''; }); $('#btnReload').addEventListener('click', load); $('#q').addEventListener('input', ()=>{ clearTimeout(window._q); window._q=setTimeout(()=>{ state.page=1; load(); },250); }); window._q=setTimeout(load,250); }); $('#filterCat').addEventListener('change', ()=>{ state.page=1; load(); });
 
+    $('#prevPage').addEventListener('click', ()=>{ if(state.page>1){ state.page--; load(); }});
+    $('#nextPage').addEventListener('click', ()=>{ if(state.page<state.pages){ state.page++; load(); }});
     setBadge(); load();
   })();
   </script>
