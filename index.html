@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>단어 등록·검색 (Supabase 저장)</title>
-  <!-- BUILD MARKER: WORD_CARD_BORDERS_UTILS_2025-08-25_06 -->
+  <!-- BUILD MARKER: PAGED50_ERRORSAFE_2025-08-25_07 -->
   <script>
     tailwind = { config: { darkMode:'class', theme:{ extend:{ fontFamily:{ sans:["Inter","Pretendard","ui-sans-serif","system-ui"] }, colors:{ brand:{600:'#2563eb',700:'#1d4ed8'} } } } } }
   </script>
@@ -16,12 +16,19 @@
     :root{ color-scheme: dark }
     html,body{ height:100% }
     body{ font-family: Inter, Pretendard, ui-sans-serif, system-ui }
-    /* 단색 파란 배경 */
     .page-solid{ background:#0f233d }
+    .CARD{ border-width:2px; border-color:rgba(71,85,105,.7); background-color:rgba(15,23,42,.7); border-radius:0.75rem; padding:1rem 1.25rem; backdrop-filter:blur(4px) }
+    .PILL{ display:inline-block; font-size:.75rem; padding:.25rem .625rem; border-radius:9999px; border:2px solid rgba(71,85,105,.7); background:rgba(15,23,42,.8) }
+    .INPUT{ width:100%; border-radius:.5rem; border:2px solid rgba(71,85,105,.7); background:rgba(15,23,42,.9); color:#e2e8f0; padding:.5rem .75rem; font-size:.875rem; outline:none }
+    .INPUT:focus{ border-color:#2563eb; box-shadow:0 0 0 2px rgba(37,99,235,.25) inset }
+    .BTN{ display:inline-flex; align-items:center; justify-content:center; gap:.25rem; border-radius:.5rem; padding:.5rem 1rem; font-weight:600; font-size:.875rem }
+    .BTN-GHOST{ border:2px solid rgba(71,85,105,.7); background:rgba(15,23,42,.7) }
+    .BTN-GHOST:hover{ background:rgba(30,41,59,.7) }
+    .BTN-PRI{ background:#2563eb; color:#fff }
+    .BTN-PRI:hover{ background:#1d4ed8 }
   </style>
 </head>
 <body class="min-h-full page-solid text-slate-100">
-  <!-- 헤더 -->
   <header class="sticky top-0 z-20">
     <div class="max-w-6xl mx-auto px-4 pt-5 pb-3">
       <div class="flex items-center justify-between">
@@ -33,8 +40,8 @@
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <span id="badge" class="inline-block text-xs px-2.5 py-1 rounded-full border-2 border-slate-600/70 bg-slate-900/80">🔒 잠금 중</span>
-          <button id="btnOpenPwd" class="inline-flex items-center justify-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold border-2 border-slate-600/70 bg-slate-900/70 hover:bg-slate-800/70">관리자</button>
+          <span id="badge" class="PILL">🔒 잠금 중</span>
+          <button id="btnOpenPwd" class="BTN BTN-GHOST">관리자</button>
         </div>
       </div>
     </div>
@@ -43,28 +50,28 @@
   <main class="max-w-6xl mx-auto px-4 pb-16 pt-4">
     <div class="grid md:grid-cols-3 gap-6">
       <!-- 등록 -->
-      <section class="rounded-xl border-2 border-slate-600/70 bg-slate-900/70 backdrop-blur px-5 py-4 md:col-span-1">
+      <section class="CARD md:col-span-1">
         <h2 class="font-semibold">단어 등록</h2>
         <div class="mt-3 grid gap-3">
           <label class="grid gap-1"><span class="text-xs text-slate-300">단어</span>
-            <input id="newWord" class="w-full rounded-lg border-2 border-slate-600/70 bg-slate-900/90 text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/40" placeholder="예: 빗모질다" />
+            <input id="newWord" class="INPUT" placeholder="예: 빗모질다" />
           </label>
           <label class="grid gap-1"><span class="text-xs text-slate-300">뜻</span>
-            <textarea id="newMeaning" rows="3" class="w-full rounded-lg border-2 border-slate-600/70 bg-slate-900/90 text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/40" placeholder="예: 횡포(橫暴)하다"></textarea>
+            <textarea id="newMeaning" rows="3" class="INPUT" placeholder="예: 횡포(橫暴)하다"></textarea>
           </label>
           <label class="grid gap-1"><span class="text-xs text-slate-300">분류</span>
-            <select id="newCat" class="w-full rounded-lg border-2 border-slate-600/70 bg-slate-900/90 text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/40">
+            <select id="newCat" class="INPUT">
               <option>있는말</option>
               <option>있던말</option>
               <option>만든말</option>
             </select>
           </label>
           <label class="grid gap-1"><span class="text-xs text-slate-300">만든방법</span>
-            <input id="newMethod" class="w-full rounded-lg border-2 border-slate-600/70 bg-slate-900/90 text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/40" placeholder="예: 빗모질다 pisk-(橫) + mwǒtil-(暴) 직역"/>
+            <input id="newMethod" class="INPUT" placeholder="예: 빗모질다 pisk-(橫) + mwǒtil-(暴) 직역"/>
           </label>
           <div class="flex gap-2">
-            <button id="btnAdd" class="inline-flex items-center justify-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold bg-brand-600 text-white hover:bg-brand-700">추가</button>
-            <button id="btnClear" class="inline-flex items-center justify-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold border-2 border-slate-600/70 bg-slate-900/70 hover:bg-slate-800/70">초기화</button>
+            <button id="btnAdd" class="BTN BTN-PRI">추가</button>
+            <button id="btnClear" class="BTN BTN-GHOST">초기화</button>
           </div>
           <p id="sysAdd" class="text-xs text-rose-400"></p>
           <p class="text-xs text-slate-300">낱말을 올리기에 앞서 <a href="https://arca.live/b/peregrini" target="_blank" rel="noopener noreferrer" class="underline text-brand-600 hover:text-brand-700">우리말 채널(arca.live/b/peregrini)</a>에 올려 이야기를 나눠봅시다.</p>
@@ -72,11 +79,11 @@
       </section>
 
       <!-- 검색/목록 -->
-      <section class="rounded-xl border-2 border-slate-600/70 bg-slate-900/70 backdrop-blur px-5 py-4 md:col-span-2">
+      <section class="CARD md:col-span-2">
         <h2 class="font-semibold">검색</h2>
         <div class="mt-3 grid md:grid-cols-3 gap-3">
-          <input id="q" class="w-full rounded-lg border-2 border-slate-600/70 bg-slate-900/90 text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/40 md:col-span-2" placeholder="단어/뜻/만든방법 검색…" />
-          <select id="filterCat" class="w-full rounded-lg border-2 border-slate-600/70 bg-slate-900/90 text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/40">
+          <input id="q" class="INPUT md:col-span-2" placeholder="단어/뜻/만든방법 검색…" />
+          <select id="filterCat" class="INPUT">
             <option>전체</option>
             <option>있는말</option>
             <option>있던말</option>
@@ -85,11 +92,11 @@
         </div>
         <div class="mt-2 text-xs text-slate-400 flex items-center gap-2">
           <span id="count">–</span>
-          <button id="btnReload" class="inline-flex items-center justify-center gap-1 rounded-lg px-2 py-1 text-sm font-semibold border-2 border-slate-600/70 bg-slate-900/70 hover:bg-slate-800/70">새로고침</button>
+          <button id="btnReload" class="BTN BTN-GHOST px-2 py-1">새로고침</button>
           <div class="ml-auto flex items-center gap-2">
-            <button id="prevPage" class="inline-flex items-center justify-center gap-1 rounded-lg px-3 py-1 text-sm font-semibold border-2 border-slate-600/70 bg-slate-900/70 hover:bg-slate-800/70 disabled:opacity-40 disabled:cursor-not-allowed">이전</button>
+            <button id="prevPage" class="BTN BTN-GHOST px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed">이전</button>
             <span id="pageInfo">1 / 1</span>
-            <button id="nextPage" class="inline-flex items-center justify-center gap-1 rounded-lg px-3 py-1 text-sm font-semibold border-2 border-slate-600/70 bg-slate-900/70 hover:bg-slate-800/70 disabled:opacity-40 disabled:cursor-not-allowed">다음</button>
+            <button id="nextPage" class="BTN BTN-GHOST px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed">다음</button>
           </div>
         </div>
 
@@ -100,18 +107,17 @@
 
   <!-- 비밀번호 모달 -->
   <div id="pwdModal" class="hidden fixed inset-0 z-40 bg-black/40 grid place-items-center p-4">
-    <div class="rounded-xl border-2 border-slate-600/70 bg-slate-900/70 backdrop-blur px-5 py-4 w-full max-w-sm">
+    <div class="CARD w-full max-w-sm">
       <h3 class="font-semibold">관리자 비밀번호</h3>
-      <input id="pwd" type="password" class="w-full rounded-lg border-2 border-slate-600/70 bg-slate-900/90 text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/40 mt-3" placeholder="••••••" />
+      <input id="pwd" type="password" class="INPUT mt-3" placeholder="••••••" />
       <div class="flex gap-2 mt-4">
-        <button id="btnVerify" class="inline-flex items-center justify-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold bg-brand-600 text-white hover:bg-brand-700">확인</button>
-        <button id="btnClosePwd" class="inline-flex items-center justify-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold border-2 border-slate-600/70 bg-slate-900/70 hover:bg-slate-800/70">닫기</button>
+        <button id="btnVerify" class="BTN BTN-PRI">확인</button>
+        <button id="btnClosePwd" class="BTN BTN-GHOST">닫기</button>
       </div>
       <p id="sysPwd" class="text-xs text-rose-400 mt-2"></p>
     </div>
   </div>
 
-  <!-- Toasts -->
   <div id="toasts" class="fixed top-4 right-4 space-y-2 z-50"></div>
 
   <script>
@@ -123,11 +129,9 @@
     const state = { adminOK:false, adminPwd:'', q:'', cat:'전체', page:1, limit:50, total:0, pages:1, entries:[] };
     const $ = (s)=>document.querySelector(s);
 
-    // 공통 클래스(카드/배지)
-    const CARD = 'rounded-xl border-2 border-slate-600/70 bg-slate-900/70 backdrop-blur px-5 py-4';
-    const PILL = 'inline-block text-xs px-2.5 py-1 rounded-full border-2 border-slate-600/70 bg-slate-900/80';
-
-    function toast(msg,type='ok'){ const el=document.createElement('div'); el.className=`rounded-lg px-3 py-2 text-sm ${type==='ok'?'bg-brand-600 text-white':'bg-rose-600 text-white'}`; el.textContent=msg; $('#toasts').appendChild(el); setTimeout(()=>el.remove(),1600); }
+    function toast(msg,type='ok'){
+      const el=document.createElement('div'); el.className=`rounded-lg px-3 py-2 text-sm ${type==='ok'?'bg-brand-600 text-white':'bg-rose-600 text-white'}`; el.textContent=msg; $('#toasts').appendChild(el); setTimeout(()=>el.remove(),1600);
+    }
     function setBadge(){ $('#badge').textContent = state.adminOK? '🔓 관리자 모드' : '🔒 잠금 중'; }
 
     const openPwd = ()=>$('#pwdModal').classList.remove('hidden');
@@ -144,28 +148,34 @@
     }
 
     async function load(){
-      state.q = $('#q').value.trim();
-      state.cat = $('#filterCat').value;
-      $('#count').textContent='불러오는 중…';
-      const from = (state.page-1) * state.limit;
-      const to = from + state.limit - 1;
-      let query = db.from('entries')
-        .select('*', { count: 'exact' })
-        .order('created_at',{ascending:false})
-        .range(from, to);
-      if(state.cat!=='전체') query = query.eq('category', state.cat);
-      if(state.q) query = query.or(`word.ilike.%${state.q}%,meaning.ilike.%${state.q}%,method.ilike.%${state.q}%`);
-      const { data, count, error } = await query;
-      if(error){ $('#count').textContent='오류'; toast(error.message,'err'); return; }
-      state.entries = data||[];
-      state.total = count ?? state.entries.length;
-      state.pages = Math.max(1, Math.ceil((state.total||0)/state.limit));
-      $('#count').textContent = `총 ${state.total}개 중 ${state.page}/${state.pages}페이지`;
-      const pageInfo = $('#pageInfo'); if(pageInfo) pageInfo.textContent = `${state.page} / ${state.pages}`;
-      const prev = $('#prevPage'), next = $('#nextPage');
-      if(prev) prev.disabled = state.page<=1;
-      if(next) next.disabled = state.page>=state.pages;
-      renderList();
+      try{
+        state.q = $('#q').value.trim();
+        state.cat = $('#filterCat').value;
+        const from = (state.page-1) * state.limit;
+        const to = from + state.limit - 1;
+        $('#count').textContent='불러오는 중…';
+        let query = db.from('entries')
+          .select('*', { count: 'exact', head: false })
+          .order('created_at', { ascending:false })
+          .range(from, to);
+        if(state.cat!=='전체') query = query.eq('category', state.cat);
+        if(state.q) query = query.or(`word.ilike.%${state.q}%,meaning.ilike.%${state.q}%,method.ilike.%${state.q}%`);
+        const { data, count, error } = await query;
+        if(error) throw error;
+        state.entries = data || [];
+        state.total = (typeof count === 'number') ? count : state.entries.length;
+        state.pages = Math.max(1, Math.ceil(state.total / state.limit));
+        $('#count').textContent = `총 ${state.total}개 중 ${state.page}/${state.pages}페이지`;
+        const pageInfo = $('#pageInfo'); if(pageInfo) pageInfo.textContent = `${state.page} / ${state.pages}`;
+        const prev = $('#prevPage'), next = $('#nextPage');
+        if(prev) prev.disabled = state.page<=1;
+        if(next) next.disabled = state.page>=state.pages;
+        renderList();
+      }catch(err){
+        console.error(err);
+        $('#count').textContent = '오류: '+(err?.message||err);
+        const root=$('#list'); if(root) root.innerHTML='';
+      }
     }
 
     function esc(s=''){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[m])); }
@@ -174,33 +184,32 @@
     function renderList(){
       const root=$('#list'); root.innerHTML='';
       for(const e of state.entries){
-        const li=document.createElement('li');
-        li.className = CARD; // ▶ 리스트 항목을 ‘카드’로 명확히 보이게
+        const li=document.createElement('li'); li.className='CARD';
         li.innerHTML=`
           <div class="flex items-start justify-between">
             <div>
               <div class="text-base font-semibold">${esc(e.word)}</div>
               <div class="text-xs text-slate-400">${new Date(e.created_at).toLocaleString()}</div>
             </div>
-            <span class="${PILL}">${esc(e.category)}</span>
+            <span class="PILL">${esc(e.category)}</span>
           </div>
           <div class="mt-3 text-sm whitespace-pre-wrap">${esc(e.meaning)}</div>
-          ${e.method?`<div class="mt-2 text-xs text-slate-400">만든방법: ${esc(e.method)}</div>`:''}
+          ${e.method?`<div class=\"mt-2 text-xs text-slate-400\">만든방법: ${esc(e.method)}</div>`:''}
           <div class="h-px bg-slate-700/80 my-3"></div>
           <div class="flex gap-2 justify-end">
-            <button class="inline-flex items-center justify-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold border-2 border-slate-600/70 bg-slate-900/70 hover:bg-slate-800/70" data-edit="${e.id}">수정</button>
-            <button class="inline-flex items-center justify-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold border-2 border-slate-600/70 bg-slate-900/70 hover:bg-slate-800/70" data-del="${e.id}">삭제</button>
+            <button class="BTN BTN-GHOST" data-edit="${e.id}">수정</button>
+            <button class="BTN BTN-GHOST" data-del="${e.id}">삭제</button>
           </div>
           <div id="edit-${e.id}" class="hidden mt-3 grid gap-2">
             <div class="grid md:grid-cols-2 gap-2">
-              <input id="ew-${e.id}" class="w-full rounded-lg border-2 border-slate-600/70 bg-slate-900/90 text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/40" value="${escAttr(e.word)}" />
-              <select id="ec-${e.id}" class="w-full rounded-lg border-2 border-slate-600/70 bg-slate-900/90 text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/40">${['있는말','있던말','만든말'].map(c=>`<option ${c===e.category?'selected':''}>${c}</option>`).join('')}</select>
+              <input id="ew-${e.id}" class="INPUT" value="${escAttr(e.word)}" />
+              <select id="ec-${e.id}" class="INPUT">${['있는말','있던말','만든말'].map(c=>`<option ${c===e.category?'selected':''}>${c}</option>`).join('')}</select>
             </div>
-            <textarea id="em-${e.id}" rows="3" class="w-full rounded-lg border-2 border-slate-600/70 bg-slate-900/90 text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/40">${esc(e.meaning)}</textarea>
-            <input id="ed-${e.id}" class="w-full rounded-lg border-2 border-slate-600/70 bg-slate-900/90 text-slate-100 px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600/40" value="${escAttr(e.method||'')}" placeholder="만든방법" />
+            <textarea id="em-${e.id}" rows="3" class="INPUT">${esc(e.meaning)}</textarea>
+            <input id="ed-${e.id}" class="INPUT" value="${escAttr(e.method||'')}" placeholder="만든방법" />
             <div class="flex gap-2 justify-end">
-              <button class="inline-flex items-center justify-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold bg-brand-600 text-white hover:bg-brand-700" data-save="${e.id}">저장</button>
-              <button class="inline-flex items-center justify-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold border-2 border-slate-600/70 bg-slate-900/70 hover:bg-slate-800/70" data-cancel="${e.id}">취소</button>
+              <button class="BTN BTN-PRI" data-save="${e.id}">저장</button>
+              <button class="BTN BTN-GHOST" data-cancel="${e.id}">취소</button>
             </div>
           </div>`;
         root.appendChild(li);
@@ -223,10 +232,12 @@
 
     async function addEntry(){ const word=$('#newWord').value.trim(); const meaning=$('#newMeaning').value.trim(); const category=$('#newCat').value; const method=$('#newMethod').value.trim(); if(!word||!meaning){ $('#sysAdd').textContent='단어/뜻은 필수입니다.'; return; } const { error }=await db.from('entries').insert([{ word,meaning,category,method }]); if(error){ $('#sysAdd').textContent='추가 오류: '+error.message; return; } $('#sysAdd').textContent=''; $('#newWord').value=''; $('#newMeaning').value=''; $('#newMethod').value=''; toast('추가 완료'); load(); }
 
-    $('#btnAdd').addEventListener('click', addEntry); $('#btnClear').addEventListener('click', ()=>{ $('#newWord').value=''; $('#newMeaning').value=''; $('#newMethod').value=''; }); $('#btnReload').addEventListener('click', load); $('#q').addEventListener('input', ()=>{ clearTimeout(window._q); window._q=setTimeout(()=>{ state.page=1; load(); },250); }); window._q=setTimeout(load,250); }); $('#filterCat').addEventListener('change', ()=>{ state.page=1; load(); });
+    $('#btnAdd').addEventListener('click', addEntry); $('#btnClear').addEventListener('click', ()=>{ $('#newWord').value=''; $('#newMeaning').value=''; $('#newMethod').value=''; }); $('#btnReload').addEventListener('click', load); $('#q').addEventListener('input', ()=>{ clearTimeout(window._q); window._q=setTimeout(()=>{ state.page=1; load(); },250); }); $('#filterCat').addEventListener('change', ()=>{ state.page=1; load(); });
 
-    $('#prevPage').addEventListener('click', ()=>{ if(state.page>1){ state.page--; load(); }});
-    $('#nextPage').addEventListener('click', ()=>{ if(state.page<state.pages){ state.page++; load(); }});
+    const prevEl=$('#prevPage'), nextEl=$('#nextPage');
+    if(prevEl) prevEl.addEventListener('click', ()=>{ if(state.page>1){ state.page--; load(); }});
+    if(nextEl) nextEl.addEventListener('click', ()=>{ if(state.page<state.pages){ state.page++; load(); }});
+
     setBadge(); load();
   })();
   </script>
